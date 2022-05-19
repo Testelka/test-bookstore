@@ -6,7 +6,7 @@ services:
   wordpress:
     depends_on:
       - db
-    image: testelka/bookstore:1.0
+    image: testelkapl/test-bookstore:1.0
     restart: always
     ports:
       - 8080:80
