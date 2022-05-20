@@ -1,12 +1,10 @@
 version: '3.1'
 
 services:
-
-
   wordpress:
     depends_on:
       - db
-    image: testelkapl/test-bookstore:1.0
+    image: testelkapl/test-bookstore-wordpress:1.0
     restart: always
     ports:
       - 8080:80
@@ -23,16 +21,12 @@ services:
       - wpsite
 
   db:
-    image: mysql:8.0.29
+    image: testelkapl/test-bookstore-mysql:1.0
     restart: always
-    environment:
-      MYSQL_DATABASE: wordpress
-      MYSQL_USER: wordpress
-      MYSQL_PASSWORD: wordpress
-      MYSQL_ROOT_PASSWORD: wordpress
     volumes:
       - db_data:/var/lib/mysql
-      - ./dump.sql:/docker-entrypoint-initdb.d/dump.sql
+    cap_add:
+      - SYS_NICE  # CAP_SYS_NICE
     networks:
       - wpsite
       
