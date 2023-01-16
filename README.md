@@ -1,6 +1,6 @@
 # Test Bookstore App
 
-This is an app you can use to practice you automation testing skills (for example with Selenium). It's build on Wordpress so you're going to need both Wordpress files and mysql database (populated with data).
+This is an app you can use to practice your automation testing skills (for example with Selenium). It's build on Wordpress so you're going to need both Wordpress files and mysql database (populated with data).
 
 You can deploy it locally using Docker. Just use docker-compose.yml and run docker-compose command to have your test web app set up in seconds.
 
