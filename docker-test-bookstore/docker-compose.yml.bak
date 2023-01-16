@@ -1,0 +1,52 @@
+version: '3.1'
+
+services:
+  wordpress:
+    depends_on:
+      - db
+    image: testelkapl/test-bookstore-wordpress:1.0
+    restart: always
+    ports:
+      - 8080:80
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - wordpress_data:/var/www/html
+    links:
+      - db:mysql
+    networks:
+      - wpsite
+
+  db:
+    image: testelkapl/test-bookstore-mysql:1.0
+    restart: always
+    volumes:
+      - db_data:/var/lib/mysql
+    cap_add:
+      - SYS_NICE  # CAP_SYS_NICE
+    networks:
+      - wpsite
+      
+  phpmyadmin:
+    depends_on:
+      - db
+    image: phpmyadmin/phpmyadmin
+    restart: always
+    ports:
+      - 8000:80
+    environment:
+      MYSQL_USERNAME: wordpress
+      MYSQL_ROOT_PASSWORD: wordpress 
+    networks:
+      - wpsite
+    links:
+      - db:mysql
+networks:
+  wpsite:
+volumes:
+  db_data: {}
+  wordpress_data: {}
+      

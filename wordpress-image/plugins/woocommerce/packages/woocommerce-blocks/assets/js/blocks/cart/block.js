@@ -5,20 +5,16 @@ import { __ } from '@wordpress/i18n';
 import { useStoreCart } from '@woocommerce/base-context/hooks';
 import { useEffect } from '@wordpress/element';
 import LoadingMask from '@woocommerce/base-components/loading-mask';
-import {
-	ValidationContextProvider,
-	StoreNoticesContainer,
-} from '@woocommerce/base-context';
+import { SnackbarNoticesContainer } from '@woocommerce/base-context';
 import { CURRENT_USER_IS_ADMIN } from '@woocommerce/settings';
 import BlockErrorBoundary from '@woocommerce/base-components/block-error-boundary';
 import { translateJQueryEventToNative } from '@woocommerce/base-utils';
 import withScrollToTop from '@woocommerce/base-hocs/with-scroll-to-top';
+import { CartProvider } from '@woocommerce/base-context/providers';
 import {
-	StoreNoticesProvider,
-	StoreSnackbarNoticesProvider,
-	CartProvider,
-} from '@woocommerce/base-context/providers';
-import { SlotFillProvider } from '@woocommerce/blocks-checkout';
+	SlotFillProvider,
+	StoreNoticesContainer,
+} from '@woocommerce/blocks-checkout';
 
 /**
  * Internal dependencies
@@ -28,7 +24,7 @@ import './style.scss';
 
 const reloadPage = () => void window.location.reload( true );
 
-const Cart = ( { children, attributes } ) => {
+const Cart = ( { children, attributes = {} } ) => {
 	const { cartIsLoading } = useStoreCart();
 	const { hasDarkControls } = attributes;
 
@@ -39,9 +35,7 @@ const Cart = ( { children, attributes } ) => {
 					hasDarkControls,
 				} }
 			>
-				<ValidationContextProvider>
-					{ children }
-				</ValidationContextProvider>
+				{ children }
 			</CartBlockContext.Provider>
 		</LoadingMask>
 	);
@@ -74,7 +68,10 @@ const ScrollOnError = ( { scrollToTop } ) => {
 };
 const Block = ( { attributes, children, scrollToTop } ) => (
 	<BlockErrorBoundary
-		header={ __( 'Something went wrong…', 'woocommerce' ) }
+		header={ __(
+			'Something went wrong. Please contact us for assistance.',
+			'woocommerce'
+		) }
 		text={ __(
 			'The cart has encountered an unexpected error. If the error persists, please get in touch with us for help.',
 			'woocommerce'
@@ -86,17 +83,14 @@ const Block = ( { attributes, children, scrollToTop } ) => (
 		}
 		showErrorMessage={ CURRENT_USER_IS_ADMIN }
 	>
-		<StoreSnackbarNoticesProvider context="wc/cart">
-			<StoreNoticesProvider>
-				<StoreNoticesContainer context="wc/cart" />
-				<SlotFillProvider>
-					<CartProvider>
-						<Cart attributes={ attributes }>{ children }</Cart>
-						<ScrollOnError scrollToTop={ scrollToTop } />
-					</CartProvider>
-				</SlotFillProvider>
-			</StoreNoticesProvider>
-		</StoreSnackbarNoticesProvider>
+		<SnackbarNoticesContainer context="wc/cart" />
+		<StoreNoticesContainer context="wc/cart" />
+		<SlotFillProvider>
+			<CartProvider>
+				<Cart attributes={ attributes }>{ children }</Cart>
+				<ScrollOnError scrollToTop={ scrollToTop } />
+			</CartProvider>
+		</SlotFillProvider>
 	</BlockErrorBoundary>
 );
 export default withScrollToTop( Block );

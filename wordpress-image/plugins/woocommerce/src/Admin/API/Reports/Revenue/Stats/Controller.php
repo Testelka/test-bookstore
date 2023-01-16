@@ -47,16 +47,17 @@ class Controller extends \WC_REST_Reports_Controller implements ExportableInterf
 	 * @return array
 	 */
 	protected function prepare_reports_query( $request ) {
-		$args              = array();
-		$args['before']    = $request['before'];
-		$args['after']     = $request['after'];
-		$args['interval']  = $request['interval'];
-		$args['page']      = $request['page'];
-		$args['per_page']  = $request['per_page'];
-		$args['orderby']   = $request['orderby'];
-		$args['order']     = $request['order'];
-		$args['segmentby'] = $request['segmentby'];
-		$args['fields']    = $request['fields'];
+		$args                        = array();
+		$args['before']              = $request['before'];
+		$args['after']               = $request['after'];
+		$args['interval']            = $request['interval'];
+		$args['page']                = $request['page'];
+		$args['per_page']            = $request['per_page'];
+		$args['orderby']             = $request['orderby'];
+		$args['order']               = $request['order'];
+		$args['segmentby']           = $request['segmentby'];
+		$args['fields']              = $request['fields'];
+		$args['force_cache_refresh'] = $request['force_cache_refresh'];
 
 		return $args;
 	}
@@ -435,6 +436,12 @@ class Controller extends \WC_REST_Reports_Controller implements ExportableInterf
 			),
 			'validate_callback' => 'rest_validate_request_arg',
 		);
+		$params['force_cache_refresh'] = array(
+			'description'       => __( 'Force retrieval of fresh data instead of from the cache.', 'woocommerce' ),
+			'type'              => 'boolean',
+			'sanitize_callback' => 'wp_validate_boolean',
+			'validate_callback' => 'rest_validate_request_arg',
+		);
 
 		return $params;
 	}
@@ -449,12 +456,12 @@ class Controller extends \WC_REST_Reports_Controller implements ExportableInterf
 			'date'         => __( 'Date', 'woocommerce' ),
 			'orders_count' => __( 'Orders', 'woocommerce' ),
 			'gross_sales'  => __( 'Gross sales', 'woocommerce' ),
-			'total_sales'  => __( 'Total sales', 'woocommerce' ),
 			'refunds'      => __( 'Returns', 'woocommerce' ),
 			'coupons'      => __( 'Coupons', 'woocommerce' ),
+			'net_revenue'  => __( 'Net sales', 'woocommerce' ),
 			'taxes'        => __( 'Taxes', 'woocommerce' ),
 			'shipping'     => __( 'Shipping', 'woocommerce' ),
-			'net_revenue'  => __( 'Net Revenue', 'woocommerce' ),
+			'total_sales'  => __( 'Total sales', 'woocommerce' ),
 		);
 	}
 
@@ -471,12 +478,12 @@ class Controller extends \WC_REST_Reports_Controller implements ExportableInterf
 			'date'         => $item['date_start'],
 			'orders_count' => $subtotals['orders_count'],
 			'gross_sales'  => self::csv_number_format( $subtotals['gross_sales'] ),
-			'total_sales'  => self::csv_number_format( $subtotals['total_sales'] ),
 			'refunds'      => self::csv_number_format( $subtotals['refunds'] ),
 			'coupons'      => self::csv_number_format( $subtotals['coupons'] ),
+			'net_revenue'  => self::csv_number_format( $subtotals['net_revenue'] ),
 			'taxes'        => self::csv_number_format( $subtotals['taxes'] ),
 			'shipping'     => self::csv_number_format( $subtotals['shipping'] ),
-			'net_revenue'  => self::csv_number_format( $subtotals['net_revenue'] ),
+			'total_sales'  => self::csv_number_format( $subtotals['total_sales'] ),
 		);
 	}
 }

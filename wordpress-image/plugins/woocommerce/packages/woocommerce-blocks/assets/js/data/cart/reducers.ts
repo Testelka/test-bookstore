@@ -8,7 +8,7 @@ import type { Reducer } from 'redux';
  * Internal dependencies
  */
 import { ACTION_TYPES as types } from './action-types';
-import { defaultCartState, CartState } from '../default-states';
+import { defaultCartState, CartState } from './default-state';
 import { EMPTY_CART_ERRORS } from '../constants';
 import type { CartAction } from './actions';
 
@@ -87,14 +87,14 @@ const reducer: Reducer< CartState > = (
 				};
 			}
 			break;
-		case types.SET_BILLING_DATA:
+		case types.SET_BILLING_ADDRESS:
 			state = {
 				...state,
 				cartData: {
 					...state.cartData,
 					billingAddress: {
 						...state.cartData.billingAddress,
-						...action.billingData,
+						...action.billingAddress,
 					},
 				},
 			};

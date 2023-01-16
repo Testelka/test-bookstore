@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 if ( ! class_exists( 'YIKES_Custom_Product_Tabs_Custom_Tabs' ) ) {
 
@@ -18,7 +18,7 @@ if ( ! class_exists( 'YIKES_Custom_Product_Tabs_Custom_Tabs' ) ) {
 
 			// Save custom tab data
 			add_action( 'woocommerce_process_product_meta', array( $this, 'product_save_data' ), 10, 2 );
-			
+
 			// Enqueue our JS / CSS files
 			add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts_and_styles' ), 10, 1 );
 
@@ -47,36 +47,38 @@ if ( ! class_exists( 'YIKES_Custom_Product_Tabs_Custom_Tabs' ) ) {
 						wp_enqueue_editor();
 					}
 
+					$suffix = SCRIPT_DEBUG ? '' : '.min';
+
 					// script
-					wp_enqueue_script ( 'repeatable-custom-tabs', YIKES_Custom_Product_Tabs_URI . 'js/repeatable-custom-tabs.min.js' , array( 'jquery' ) , YIKES_Custom_Product_Tabs_Version );
+					wp_enqueue_script ( 'repeatable-custom-tabs', YIKES_Custom_Product_Tabs_URI . "js/repeatable-custom-tabs{$suffix}.js" , array( 'jquery' ) , YIKES_Custom_Product_Tabs_Version );
 					wp_localize_script( 'repeatable-custom-tabs', 'repeatable_custom_tabs', array(
-						'loading_gif'					=> '<img src="' . admin_url( 'images/loading.gif' ) . '" alt="preloader" class="loading-wp-editor-gif" />',
-						'ajaxurl' 						=> admin_url( 'admin-ajax.php' ),
-						'get_wp_editor_security_nonce' 	=> wp_create_nonce( 'yikes_woo_get_wp_editor_nonce' ),
-						'save_tab_as_reusable_nonce' 	=> wp_create_nonce( 'yikes_woo_save_tab_as_reusable_nonce' ),
-						'fetch_reusable_tabs_nonce' 	=> wp_create_nonce( 'yikes_woo_fetch_reusable_tabs_nonce' ),
-						'fetch_reusable_tab_nonce' 		=> wp_create_nonce( 'yikes_woo_fetch_reusable_tab_nonce' ),
-						'delete_reusable_tab_nonce' 	=> wp_create_nonce( 'yikes_woo_delete_reusable_tab_nonce' ), 
-						'save_product_tabs_nonce' 		=> wp_create_nonce( 'yikes_woo_save_product_tabs_nonce' ),
-						'global_post_id'				=> $post->ID,
+						'loading_gif'                   => '<img src="' . admin_url( 'images/loading.gif' ) . '" alt="preloader" class="loading-wp-editor-gif custom-tabs-preloader" />',
+						'ajaxurl'                       => admin_url( 'admin-ajax.php' ),
+						'get_wp_editor_security_nonce'  => wp_create_nonce( 'yikes_woo_get_wp_editor_nonce' ),
+						'save_tab_as_reusable_nonce'    => wp_create_nonce( 'yikes_woo_save_tab_as_reusable_nonce' ),
+						'fetch_reusable_tabs_nonce'     => wp_create_nonce( 'yikes_woo_fetch_reusable_tabs_nonce' ),
+						'fetch_reusable_tab_nonce'      => wp_create_nonce( 'yikes_woo_fetch_reusable_tab_nonce' ),
+						'delete_reusable_tab_nonce'     => wp_create_nonce( 'yikes_woo_delete_reusable_tab_nonce' ),
+						'save_product_tabs_nonce'       => wp_create_nonce( 'yikes_woo_save_product_tabs_nonce' ),
+						'global_post_id'                => $post->ID,
 						'get_wp_editor_failure_message' => __( 'Sorry! An error has occurred while trying to retrieve the editor. Please refresh the page and try again.', 'yikes-inc-easy-custom-woocommerce-product-tabs' ),
-						'wp_version_four_eight'			=> $wp_version >= '4.8',
+						'wp_version_four_eight'         => $wp_version >= '4.8',
 					) );
 
-					wp_enqueue_script ( 'repeatable-custom-tabs-shared', YIKES_Custom_Product_Tabs_URI . 'js/repeatable-custom-tabs-shared.min.js', array( 'jquery' ), YIKES_Custom_Product_Tabs_Version );
+					wp_enqueue_script ( 'repeatable-custom-tabs-shared', YIKES_Custom_Product_Tabs_URI . "js/repeatable-custom-tabs-shared{$suffix}.js", array( 'jquery' ), YIKES_Custom_Product_Tabs_Version );
 					wp_localize_script( 'repeatable-custom-tabs-shared', 'repeatable_custom_tabs_shared', array(
-						'loading_gif'					=> '<img src="' . admin_url( 'images/loading.gif' ) . '" alt="preloader" class="loading-wp-editor-gif" />',
-						'ajaxurl' 						=> admin_url( 'admin-ajax.php' ),
-						'get_wp_editor_security_nonce'	=> wp_create_nonce( 'yikes_woo_get_wp_editor_nonce' ),
+						'loading_gif'                   => '<img src="' . admin_url( 'images/loading.gif' ) . '" alt="preloader" class="loading-wp-editor-gif custom-tabs-preloader" />',
+						'ajaxurl'                       => admin_url( 'admin-ajax.php' ),
+						'get_wp_editor_security_nonce'  => wp_create_nonce( 'yikes_woo_get_wp_editor_nonce' ),
 						'get_wp_editor_failure_message' => __( 'Sorry! An error has occurred while trying to retrieve the editor. Please refresh the page and try again.', 'yikes-inc-easy-custom-woocommerce-product-tabs' ),
 					) );
 
 					// styles
-					wp_enqueue_style( 'repeatable-custom-tabs-styles' , YIKES_Custom_Product_Tabs_URI . 'css/repeatable-custom-tabs.min.css', '', YIKES_Custom_Product_Tabs_Version, 'all' );
+					wp_enqueue_style( 'repeatable-custom-tabs-styles' , YIKES_Custom_Product_Tabs_URI . "css/repeatable-custom-tabs{$suffix}.css", array(), YIKES_Custom_Product_Tabs_Version, 'all' );
 
 					// JS lity modal library and CSS
-					wp_enqueue_script( 'lity-js', YIKES_Custom_Product_Tabs_URI . 'js/lity.min.js' , array( 'jquery' ) , YIKES_Custom_Product_Tabs_Version );
-					wp_enqueue_style( 'lity-css', YIKES_Custom_Product_Tabs_URI . 'css/dist/lity.min.css' );
+					wp_enqueue_script( 'lity-js', YIKES_Custom_Product_Tabs_URI . "js/lity{$suffix}.js" , array( 'jquery' ) , YIKES_Custom_Product_LITY_Version );
+					wp_enqueue_style( 'lity-css', YIKES_Custom_Product_Tabs_URI . "css/lity{$suffix}.css", array(), YIKES_Custom_Product_LITY_Version, 'all' );
 				}
 			}
 		}
@@ -85,7 +87,7 @@ if ( ! class_exists( 'YIKES_Custom_Product_Tabs_Custom_Tabs' ) ) {
 		 * Adds a new tab to the Product Data postbox in the admin product interface
 		 */
 		public function render_custom_product_tabs() {
-			echo "<li class=\"yikes_wc_product_tabs_tab\"><a href=\"#yikes_woocommerce_custom_product_tabs\"><span>" . __( 'Custom Tabs', 'yikes-inc-easy-custom-woocommerce-product-tabs' ) . "</span></a></li>";
+			echo '<li class="yikes_wc_product_tabs_tab"><a href="#yikes_woocommerce_custom_product_tabs"><span>' . __( 'Custom Tabs', 'yikes-inc-easy-custom-woocommerce-product-tabs' ) . '</span></a></li>';
 		}
 
 
@@ -115,6 +117,10 @@ if ( ! class_exists( 'YIKES_Custom_Product_Tabs_Custom_Tabs' ) ) {
 				return;
 			}
 
+			update_option( 'what', $_POST );
+			update_option( 'etesting_action', $_POST['_yikes_wc_custom_repeatable_product_tabs_saved_tab_id_1_action'] );
+			update_option( 'etesting_id', $_POST['_yikes_wc_custom_repeatable_product_tabs_saved_tab_id_1'] );
+
 			// Save our tabs!
 			$this->save_tabs( $post_id, $is_ajax = false );
 		}
@@ -129,7 +135,7 @@ if ( ! class_exists( 'YIKES_Custom_Product_Tabs_Custom_Tabs' ) ) {
 		*/
 		protected function save_tabs( $post_id, $is_ajax_flag ) {
 			$tab_data = array();
-			
+
 			$number_of_tabs = $_POST['number_of_tabs'];
 
 			// Create an array for tab_ids that we will use later
@@ -144,40 +150,40 @@ if ( ! class_exists( 'YIKES_Custom_Product_Tabs_Custom_Tabs' ) ) {
 			if ( isset ( $reusable_tab_options_array[$post_id] ) ) {
 				$post_has_reusable_tabs = true;
 			}
-			
+
 			$i = 1;
 			while( $i <= $number_of_tabs ) {
 
 				// Deal with saving the tab content
-			
+
 				$tab_title   = isset( $_POST['_yikes_wc_custom_repeatable_product_tabs_tab_title_' . $i] ) ? stripslashes( $_POST['_yikes_wc_custom_repeatable_product_tabs_tab_title_' . $i] ) : '';
 				$tab_content = isset( $_POST['_yikes_wc_custom_repeatable_product_tabs_tab_content_' . $i] ) ? stripslashes( $_POST['_yikes_wc_custom_repeatable_product_tabs_tab_content_' . $i] ) : '';
-			
+
 				if ( empty( $tab_title ) && empty( $tab_content ) ) {
-					
+
 					// clean up if the custom tabs are removed
 					unset( $tab_data[$i] );
-				
+
 				} else {
-					
+
 					$tab_id = '';
-					
+
 					if ( $tab_title ) {
 						$tab_id = urldecode( sanitize_title( $tab_title ) );
 					}
 
 					// push the data to the array
 					$tab_data[$i] = array( 'title' => $tab_title, 'id' => $tab_id, 'content' => $tab_content );
-				}	
+				}
 
 				// Deal with saving / applying globally saved tabs
 
 				if ( isset( $_POST['_yikes_wc_custom_repeatable_product_tabs_saved_tab_id_' . $i] ) && isset( $_POST['_yikes_wc_custom_repeatable_product_tabs_saved_tab_id_' . $i . '_action'] )
 					&& ! empty( $_POST['_yikes_wc_custom_repeatable_product_tabs_saved_tab_id_' . $i] ) && ! empty( $_POST['_yikes_wc_custom_repeatable_product_tabs_saved_tab_id_' . $i . '_action'] ) ) {
-					
+
 					// Store the tab_id and action
 					$reusable_tab_id     = $_POST['_yikes_wc_custom_repeatable_product_tabs_saved_tab_id_' . $i];
-					$reusable_tab_action = $_POST['_yikes_wc_custom_repeatable_product_tabs_saved_tab_id_' . $i . '_action'];	
+					$reusable_tab_action = $_POST['_yikes_wc_custom_repeatable_product_tabs_saved_tab_id_' . $i . '_action'];
 
 					// If $reusable_tab_options_array is not empty, we've done this before
 					if ( ! empty( $reusable_tab_options_array ) ) {
@@ -230,7 +236,7 @@ if ( ! class_exists( 'YIKES_Custom_Product_Tabs_Custom_Tabs' ) ) {
 				// If we have tabs...
 				if ( ! empty( $current_saved_tab_id_array ) ) {
 
-					// Loop through our reusable tab array	
+					// Loop through our reusable tab array
 					foreach( $reusable_tab_options_array[ $post_id ] as $id => $reusable_tab_array ) {
 
 						// If we find one of our reusable tabs is no longer part of this post, remove it
@@ -239,7 +245,7 @@ if ( ! class_exists( 'YIKES_Custom_Product_Tabs_Custom_Tabs' ) ) {
 							unset( $reusable_tab_options_array[ $post_id ][ $id ] );
 							$remove_a_tab_from_reusable = true;
 						}
-					} 
+					}
 				} else {
 
 					// If we don't have any current tabs then we need to delete this post's option
@@ -252,7 +258,7 @@ if ( ! class_exists( 'YIKES_Custom_Product_Tabs_Custom_Tabs' ) ) {
 					update_option( 'yikes_woo_reusable_products_tabs_applied', $reusable_tab_options_array );
 				}
 			}
-			
+
 			// Reset the array count, when items are removed
 			$tab_data = array_values( $tab_data );
 
@@ -284,7 +290,7 @@ if ( ! class_exists( 'YIKES_Custom_Product_Tabs_Custom_Tabs' ) ) {
 
 			// Verify nonce
 			if ( ! check_ajax_referer( 'yikes_woo_get_wp_editor_nonce', 'security_nonce', false ) ) {
-			 	wp_send_json_error();
+				wp_send_json_error();
 			}
 
 			// Get & sanitize the $_POST var textarea_id
@@ -294,7 +300,7 @@ if ( ! class_exists( 'YIKES_Custom_Product_Tabs_Custom_Tabs' ) ) {
 			$tab_content = isset( $_POST['tab_content'] ) ? $_POST['tab_content'] : '';
 
 			// Set up options
-			$wp_editor_options = array( 
+			$wp_editor_options = array(
 				'textarea_name' => $textarea_id,
 				'textarea_rows' => 8,
 			);
@@ -311,13 +317,13 @@ if ( ! class_exists( 'YIKES_Custom_Product_Tabs_Custom_Tabs' ) ) {
 		*
 		* @param  string $_POST['post_id']   	| ID of the current product (post)
 		* @param  array  $_POST['product_tabs'] | array of all the tab data
-		* @return object success w/ message || failure w/ message 
+		* @return object success w/ message || failure w/ message
 		*/
 		public function yikes_woo_save_product_tabs() {
 
 			// Verify the nonce
 			if ( ! check_ajax_referer( 'yikes_woo_save_product_tabs_nonce', 'security_nonce', false ) ) {
-			 	wp_send_json_error();
+				wp_send_json_error();
 			}
 
 			// Get our product id
@@ -326,16 +332,16 @@ if ( ! class_exists( 'YIKES_Custom_Product_Tabs_Custom_Tabs' ) ) {
 			} else {
 
 				// Fail gracefully...
-				wp_send_json_error( array( 'message' => 'Could not find the product!' ) );
+				wp_send_json_error( array( 'message' => __( 'Could not find the product!', 'yikes-inc-easy-custom-woocommerce-product-tabs' ) ) );
 			}
 
 			// Save our tabs!
 			$success = $this->save_tabs( $post_id, $is_ajax = true );
 
 			if ( $success === true ) {
-				wp_send_json_success( array( 'message' => 'Your tabs have been saved' ) );
+				wp_send_json_success( array( 'message' => __( 'Your tabs have been saved', 'yikes-inc-easy-custom-woocommerce-product-tabs' ) ) );
 			} else {
-				wp_send_json_error( array( 'message' => 'Uh oh! Something went wrong with saving. Please try again.' ) );
+				wp_send_json_error( array( 'message' => __( 'Uh oh! Something went wrong with saving. Please try again.', 'yikes-inc-easy-custom-woocommerce-product-tabs' ) ) );
 			}
 		}
 
@@ -351,7 +357,7 @@ if ( ! class_exists( 'YIKES_Custom_Product_Tabs_Custom_Tabs' ) ) {
 
 			$current_products_tabs = get_post_meta( $old_post_id, 'yikes_woo_products_tabs', true );
 
-			if ( ! empty( $current_products_tabs ) ) {				
+			if ( ! empty( $current_products_tabs ) ) {
 				update_post_meta( $new_post_id, 'yikes_woo_products_tabs', $current_products_tabs );
 			}
 		}
@@ -362,4 +368,3 @@ if ( ! class_exists( 'YIKES_Custom_Product_Tabs_Custom_Tabs' ) ) {
 
 	new YIKES_Custom_Product_Tabs_Custom_Tabs();
 }
-

@@ -11,6 +11,7 @@
  */
 
 use Automattic\Jetpack\Constants;
+use Automattic\WooCommerce\Internal\Utilities\BlocksUtil;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -166,6 +167,11 @@ class WC_Tracker {
 		// Cart & checkout tech (blocks or shortcodes).
 		$data['cart_checkout'] = self::get_cart_checkout_info();
 
+		// Mini Cart block, which only exists since wp 5.9.
+		if ( version_compare( get_bloginfo( 'version' ), '5.9', '>=' ) ) {
+			$data['mini_cart_block'] = self::get_mini_cart_info();
+		}
+
 		// WooCommerce Admin info.
 		$data['wc_admin_disabled'] = apply_filters( 'woocommerce_admin_disabled', false ) ? 'yes' : 'no';
 
@@ -223,6 +229,7 @@ class WC_Tracker {
 		$wp_data['version']      = get_bloginfo( 'version' );
 		$wp_data['multisite']    = is_multisite() ? 'Yes' : 'No';
 		$wp_data['env_type']     = $environment_type;
+		$wp_data['dropins']      = array_keys( get_dropins() );
 
 		return $wp_data;
 	}
@@ -392,8 +399,9 @@ class WC_Tracker {
 		$order_counts   = self::get_order_counts();
 		$order_totals   = self::get_order_totals();
 		$order_gateways = self::get_orders_by_gateway();
+		$order_origin   = self::get_orders_origins();
 
-		return array_merge( $order_dates, $order_counts, $order_totals, $order_gateways );
+		return array_merge( $order_dates, $order_counts, $order_totals, $order_gateways, $order_origin );
 	}
 
 	/**
@@ -536,6 +544,37 @@ class WC_Tracker {
 	}
 
 	/**
+	 * Get orders origin details.
+	 *
+	 * @return array
+	 */
+	private static function get_orders_origins() {
+		global $wpdb;
+
+		$orders_origin = $wpdb->get_results(
+			"
+			SELECT
+				meta_value as origin, COUNT( DISTINCT ( orders.id ) ) as count
+			FROM
+				$wpdb->posts orders
+			LEFT JOIN
+				$wpdb->postmeta order_meta ON order_meta.post_id = orders.id
+			WHERE
+				meta_key = '_created_via'
+			GROUP BY
+				meta_value;
+			"
+		);
+
+		$orders_by_origin = array();
+		foreach ( $orders_origin as $origin ) {
+			$orders_by_origin[ $origin->origin ] = (int) $origin->count;
+		}
+
+		return array( 'created_via' => $orders_by_origin );
+	}
+
+	/**
 	 * Get review counts for different statuses.
 	 *
 	 * @return array
@@ -651,6 +690,11 @@ class WC_Tracker {
 			'enable_myaccount_registration'         => get_option( 'woocommerce_enable_myaccount_registration' ),
 			'registration_generate_username'        => get_option( 'woocommerce_registration_generate_username' ),
 			'registration_generate_password'        => get_option( 'woocommerce_registration_generate_password' ),
+			'hpos_enabled'                          => get_option( 'woocommerce_feature_custom_order_tables_enabled' ),
+			'hpos_sync_enabled'                     => get_option( 'woocommerce_custom_orders_table_data_sync_enabled' ),
+			'hpos_cot_authoritative'                => get_option( 'woocommerce_custom_orders_table_enabled' ),
+			'hpos_transactions_enabled'             => get_option( 'woocommerce_use_db_transactions_for_custom_orders_table_data_sync' ),
+			'hpos_transactions_level'               => get_option( 'woocommerce_db_transactions_isolation_level_for_custom_orders_table_data_sync' ),
 		);
 	}
 
@@ -772,6 +816,20 @@ class WC_Tracker {
 			'cart_block_attributes'                     => $cart_block_data['block_attributes'],
 			'checkout_page_contains_checkout_block'     => $checkout_block_data['page_contains_block'],
 			'checkout_block_attributes'                 => $checkout_block_data['block_attributes'],
+		);
+	}
+
+	/**
+	 * Get info about the Mini Cart Block.
+	 *
+	 * @return array
+	 */
+	private static function get_mini_cart_info() {
+		$mini_cart_block_name = 'woocommerce/mini-cart';
+		$mini_cart_block_data = wc_current_theme_is_fse_theme() ? BlocksUtil::get_block_from_template_part( $mini_cart_block_name, 'header' ) : BlocksUtil::get_blocks_from_widget_area( $mini_cart_block_name );
+		return array(
+			'mini_cart_used'             => empty( $mini_cart_block_data[0] ) ? 'No' : 'Yes',
+			'mini_cart_block_attributes' => empty( $mini_cart_block_data[0] ) ? array() : $mini_cart_block_data[0]['attrs'],
 		);
 	}
 

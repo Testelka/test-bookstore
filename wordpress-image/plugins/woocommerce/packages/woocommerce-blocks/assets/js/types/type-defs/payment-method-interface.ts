@@ -5,6 +5,7 @@
 import type PaymentMethodLabel from '@woocommerce/base-components/cart-checkout/payment-method-label';
 import type PaymentMethodIcons from '@woocommerce/base-components/cart-checkout/payment-method-icons';
 import type LoadingMask from '@woocommerce/base-components/loading-mask';
+import { ValidationInputError } from '@woocommerce/blocks-checkout';
 
 /**
  * Internal dependencies
@@ -12,11 +13,10 @@ import type LoadingMask from '@woocommerce/base-components/loading-mask';
 import type { Currency } from './currency';
 import type { CartBillingAddress, CartShippingRate } from './cart';
 import type {
+	emitterCallback,
 	responseTypes,
 	noticeContexts,
-} from '../../base/context/hooks/use-emit-response';
-import type { emitterCallback } from '../../base/context/event-emit';
-import type { PaymentMethodCurrentStatusType } from '../../base/context/providers/cart-checkout/payment-methods/types';
+} from '../../base/context/event-emit';
 import type {
 	CartResponseShippingAddress,
 	CartResponseCouponItem,
@@ -36,9 +36,10 @@ export interface PreparedCartTotalItem {
 export interface BillingDataProps {
 	// All the coupons that were applied to the cart/order.
 	appliedCoupons: CartResponseCouponItem[];
-	//The address used for billing.
+	// The address used for billing.
 	billingData: CartBillingAddress;
-	//The total item for the cart.
+	billingAddress: CartBillingAddress;
+	// The total item for the cart.
 	cartTotal: PreparedCartTotalItem;
 	// The various subtotal amounts.
 	cartTotalItems: PreparedCartTotalItem[];
@@ -46,7 +47,7 @@ export interface BillingDataProps {
 	currency: Currency;
 	// The customer Id the order belongs to.
 	customerId: number;
-	//  True means that the site is configured to display prices including tax.
+	// True means that the site is configured to display prices including tax.
 	displayPricesIncludingTax: boolean;
 }
 
@@ -75,7 +76,7 @@ export interface ComponentProps {
 	// A component used for displaying payment method labels, including an icon.
 	PaymentMethodLabel: typeof PaymentMethodLabel;
 	// A container for holding validation errors
-	ValidationInputError: () => JSX.Element | null;
+	ValidationInputError: typeof ValidationInputError;
 }
 
 export interface EmitResponseProps {
@@ -163,7 +164,16 @@ export type PaymentMethodInterface = {
 	// Used to trigger checkout processing.
 	onSubmit: () => void;
 	// Various payment status helpers.
-	paymentStatus: PaymentMethodCurrentStatusType;
+	paymentStatus: {
+		isPristine: boolean;
+		isStarted: boolean;
+		isProcessing: boolean;
+		isFinished: boolean;
+		hasError: boolean;
+		hasFailed: boolean;
+		isSuccessful: boolean;
+		isDoingExpressPayment: boolean;
+	};
 	// Deprecated. For setting an error (error message string) for express payment methods. Does not change payment status.
 	setExpressPaymentError: ( errorMessage?: string ) => void;
 	// Various data related to shipping.

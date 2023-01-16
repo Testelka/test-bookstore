@@ -5,7 +5,7 @@ import { __ } from '@wordpress/i18n';
 import { Component } from 'react';
 import PropTypes from 'prop-types';
 import { CURRENT_USER_IS_ADMIN } from '@woocommerce/settings';
-import { StoreNoticesContainer } from '@woocommerce/base-context';
+import { StoreNoticesContainer } from '@woocommerce/blocks-checkout';
 import { noticeContexts } from '@woocommerce/base-context/hooks';
 
 class PaymentMethodErrorBoundary extends Component {
@@ -24,7 +24,7 @@ class PaymentMethodErrorBoundary extends Component {
 
 		if ( hasError ) {
 			let errorText = __(
-				'This site is experiencing difficulties with this payment method. Please contact the owner of the site for assistance.',
+				'We are experiencing difficulties with this payment method. Please contact us for assistance.',
 				'woocommerce'
 			);
 			if ( isEditor || CURRENT_USER_IS_ADMIN ) {

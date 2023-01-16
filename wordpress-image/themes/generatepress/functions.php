@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Set our theme version.
-define( 'GENERATE_VERSION', '3.1.3' );
+define( 'GENERATE_VERSION', '3.2.4' );
 
 if ( ! function_exists( 'generate_setup' ) ) {
 	add_action( 'after_setup_theme', 'generate_setup' );
@@ -120,10 +120,3 @@ require $theme_dir . '/inc/structure/header.php';
 require $theme_dir . '/inc/structure/navigation.php';
 require $theme_dir . '/inc/structure/post-meta.php';
 require $theme_dir . '/inc/structure/sidebars.php';
-
-
-function testelka_footer_creds_text () {
-	$copyright = '<div class="creds"><p>Copyright © ' . date('Y') . ' · <a href="https://www.testelka.com/">Testelka</a> - All Rights Reserved</p></div>';
-	return $copyright;
-	 }
-	add_filter( 'generate_copyright', 'testelka_footer_creds_text' );

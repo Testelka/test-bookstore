@@ -414,6 +414,19 @@ class WC_Stripe_Intent_Controller {
 			if ( '' !== $selected_upe_payment_type ) {
 				// Only update the payment_method_types if we have a reference to the payment type the customer selected.
 				$request['payment_method_types'] = [ $selected_upe_payment_type ];
+				if (
+					WC_Stripe_UPE_Payment_Method_CC::STRIPE_ID === $selected_upe_payment_type &&
+					in_array(
+						WC_Stripe_UPE_Payment_Method_Link::STRIPE_ID,
+						$gateway->get_upe_enabled_payment_method_ids(),
+						true
+					)
+				) {
+					$request['payment_method_types'] = [
+						WC_Stripe_UPE_Payment_Method_CC::STRIPE_ID,
+						WC_Stripe_UPE_Payment_Method_Link::STRIPE_ID,
+					];
+				}
 				$order->update_meta_data( '_stripe_upe_payment_type', $selected_upe_payment_type );
 			}
 			if ( ! empty( $customer ) && $customer->get_id() ) {
@@ -522,9 +535,13 @@ class WC_Stripe_Intent_Controller {
 				);
 			}
 
-			$appearance = isset( $_POST['appearance'] ) ? wc_clean( wp_unslash( $_POST['appearance'] ) ) : null;
+			$is_blocks_checkout = isset( $_POST['is_blocks_checkout'] ) ? rest_sanitize_boolean( wc_clean( wp_unslash( $_POST['is_blocks_checkout'] ) ) ) : false;
+			$appearance         = isset( $_POST['appearance'] ) ? json_decode( wc_clean( wp_unslash( $_POST['appearance'] ) ) ) : null;
+
+			$appearance_transient = $is_blocks_checkout ? WC_Stripe_UPE_Payment_Gateway::WC_BLOCKS_UPE_APPEARANCE_TRANSIENT : WC_Stripe_UPE_Payment_Gateway::UPE_APPEARANCE_TRANSIENT;
+
 			if ( null !== $appearance ) {
-				set_transient( WC_Stripe_UPE_Payment_Gateway::UPE_APPEARANCE_TRANSIENT, $appearance, DAY_IN_SECONDS );
+				set_transient( $appearance_transient, $appearance, DAY_IN_SECONDS );
 			}
 			wp_send_json_success( $appearance, 200 );
 		} catch ( Exception $e ) {
@@ -544,6 +561,7 @@ class WC_Stripe_Intent_Controller {
 	 */
 	public function clear_upe_appearance_transient() {
 		delete_transient( WC_Stripe_UPE_Payment_Gateway::UPE_APPEARANCE_TRANSIENT );
+		delete_transient( WC_Stripe_UPE_Payment_Gateway::WC_BLOCKS_UPE_APPEARANCE_TRANSIENT );
 	}
 
 	/**

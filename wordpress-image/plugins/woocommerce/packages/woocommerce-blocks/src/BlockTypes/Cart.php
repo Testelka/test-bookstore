@@ -19,6 +19,13 @@ class Cart extends AbstractBlock {
 	protected $block_name = 'cart';
 
 	/**
+	 * Chunks build folder.
+	 *
+	 * @var string
+	 */
+	protected $chunks_folder = 'cart-blocks';
+
+	/**
 	 * Get the editor script handle for this block type.
 	 *
 	 * @param string $key Data to get, or default to everything.
@@ -69,11 +76,12 @@ class Cart extends AbstractBlock {
 	/**
 	 * Append frontend scripts when rendering the Cart block.
 	 *
-	 * @param array  $attributes Block attributes.
-	 * @param string $content    Block content.
+	 * @param array    $attributes Block attributes.
+	 * @param string   $content    Block content.
+	 * @param WP_Block $block      Block instance.
 	 * @return string Rendered block type output.
 	 */
-	protected function render( $attributes, $content ) {
+	protected function render( $attributes, $content, $block ) {
 		// Deregister core cart scripts and styles.
 		wp_dequeue_script( 'wc-cart' );
 		wp_dequeue_script( 'wc-password-strength-meter' );
@@ -148,21 +156,23 @@ class Cart extends AbstractBlock {
 	 */
 	protected function enqueue_data( array $attributes = [] ) {
 		parent::enqueue_data( $attributes );
+		if ( wc_shipping_enabled() ) {
+			$this->asset_data_registry->add(
+				'shippingCountries',
+				function() {
+					return $this->deep_sort_with_accents( WC()->countries->get_shipping_countries() );
+				},
+				true
+			);
+			$this->asset_data_registry->add(
+				'shippingStates',
+				function() {
+					return $this->deep_sort_with_accents( WC()->countries->get_shipping_country_states() );
+				},
+				true
+			);
+		}
 
-		$this->asset_data_registry->add(
-			'shippingCountries',
-			function() {
-				return $this->deep_sort_with_accents( WC()->countries->get_shipping_countries() );
-			},
-			true
-		);
-		$this->asset_data_registry->add(
-			'shippingStates',
-			function() {
-				return $this->deep_sort_with_accents( WC()->countries->get_shipping_country_states() );
-			},
-			true
-		);
 		$this->asset_data_registry->add(
 			'countryLocale',
 			function() {
@@ -212,11 +222,15 @@ class Cart extends AbstractBlock {
 			return $array;
 		}
 
-		if ( is_array( reset( $array ) ) ) {
-			return array_map( [ $this, 'deep_sort_with_accents' ], $array );
-		}
+		$array_without_accents = array_map(
+			function( $value ) {
+				return is_array( $value )
+					? $this->deep_sort_with_accents( $value )
+					: remove_accents( wc_strtolower( html_entity_decode( $value ) ) );
+			},
+			$array
+		);
 
-		$array_without_accents = array_map( 'remove_accents', array_map( 'wc_strtolower', array_map( 'html_entity_decode', $array ) ) );
 		asort( $array_without_accents );
 		return array_replace( $array_without_accents, $array );
 	}
@@ -227,7 +241,6 @@ class Cart extends AbstractBlock {
 	protected function hydrate_from_api() {
 		$this->asset_data_registry->hydrate_api_request( '/wc/store/v1/cart' );
 	}
-
 	/**
 	 * Register script and style assets for the block type before it is registered.
 	 *
@@ -235,15 +248,38 @@ class Cart extends AbstractBlock {
 	 */
 	protected function register_block_type_assets() {
 		parent::register_block_type_assets();
-		$blocks = [
-			'cart-blocks/express-payment--checkout-blocks/express-payment--checkout-blocks/payment',
-			'cart-blocks/line-items',
-			'cart-blocks/order-summary',
-			'cart-blocks/order-summary--checkout-blocks/billing-address--checkout-blocks/shipping-address',
-			'cart-blocks/checkout-button',
-			'cart-blocks/express-payment',
+		$chunks        = $this->get_chunks_paths( $this->chunks_folder );
+		$vendor_chunks = $this->get_chunks_paths( 'vendors--cart-blocks' );
+
+		$this->register_chunk_translations( array_merge( $chunks, $vendor_chunks ) );
+	}
+
+	/**
+	 * Get list of Cart block & its inner-block types.
+	 *
+	 * @return array;
+	 */
+	public static function get_cart_block_types() {
+		return [
+			'Cart',
+			'CartOrderSummaryTaxesBlock',
+			'CartOrderSummarySubtotalBlock',
+			'FilledCartBlock',
+			'EmptyCartBlock',
+			'CartTotalsBlock',
+			'CartItemsBlock',
+			'CartLineItemsBlock',
+			'CartOrderSummaryBlock',
+			'CartExpressPaymentBlock',
+			'ProceedToCheckoutBlock',
+			'CartAcceptedPaymentMethodsBlock',
+			'CartOrderSummaryCouponFormBlock',
+			'CartOrderSummaryDiscountBlock',
+			'CartOrderSummaryFeeBlock',
+			'CartOrderSummaryHeadingBlock',
+			'CartOrderSummaryShippingBlock',
+			'CartCrossSellsBlock',
+			'CartCrossSellsProductsBlock',
 		];
-		$chunks = preg_filter( '/$/', '-frontend', $blocks );
-		$this->register_chunk_translations( $chunks );
 	}
 }

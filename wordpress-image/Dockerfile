@@ -1,4 +1,4 @@
-FROM wordpress:5.9.3-php8.0-apache
+FROM wordpress:6.1.1-php8.2-apache
 
 COPY plugins /var/www/html/wp-content/plugins
 COPY themes /var/www/html/wp-content/themes

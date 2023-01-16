@@ -27,6 +27,7 @@ import {
 } from '@wordpress/element';
 import { sprintf, _n } from '@wordpress/i18n';
 import classnames from 'classnames';
+
 /**
  * Internal dependencies
  */
@@ -41,15 +42,19 @@ interface Props {
 	style?: Record< string, Record< string, string > >;
 	contents: string;
 	addToCartBehaviour: string;
+	hasHiddenPrice: boolean;
 }
 
-const MiniCartBlock = ( {
-	isInitiallyOpen = false,
-	colorClassNames,
-	style,
-	contents = '',
-	addToCartBehaviour = 'none',
-}: Props ): JSX.Element => {
+const MiniCartBlock = ( attributes: Props ): JSX.Element => {
+	const {
+		isInitiallyOpen = false,
+		colorClassNames,
+		style,
+		contents = '',
+		addToCartBehaviour = 'none',
+		hasHiddenPrice = false,
+	} = attributes;
+
 	const {
 		cartItemsCount: cartItemsCountFromApi,
 		cartIsLoading,
@@ -67,9 +72,8 @@ const MiniCartBlock = ( {
 	const [ isOpen, setIsOpen ] = useState< boolean >( isInitiallyOpen );
 	// We already rendered the HTML drawer placeholder, so we want to skip the
 	// slide in animation.
-	const [ skipSlideIn, setSkipSlideIn ] = useState< boolean >(
-		isInitiallyOpen
-	);
+	const [ skipSlideIn, setSkipSlideIn ] =
+		useState< boolean >( isInitiallyOpen );
 	const [ contentsNode, setContentsNode ] = useState< HTMLDivElement | null >(
 		null
 	);
@@ -77,6 +81,17 @@ const MiniCartBlock = ( {
 	const contentsRef = useCallback( ( node ) => {
 		setContentsNode( node );
 	}, [] );
+
+	useEffect( () => {
+		const body = document.querySelector( 'body' );
+		if ( body ) {
+			if ( isOpen ) {
+				Object.assign( body.style, { overflow: 'hidden' } );
+			} else {
+				Object.assign( body.style, { overflow: '' } );
+			}
+		}
+	}, [ isOpen ] );
 
 	useEffect( () => {
 		if ( contentsNode instanceof Element ) {
@@ -143,11 +158,12 @@ const MiniCartBlock = ( {
 		isBoolean
 	);
 
-	const preFetchedCartTotals = getSettingWithCoercion< CartResponseTotals | null >(
-		'cartTotals',
-		null,
-		isCartResponseTotals
-	);
+	const preFetchedCartTotals =
+		getSettingWithCoercion< CartResponseTotals | null >(
+			'cartTotals',
+			null,
+			isCartResponseTotals
+		);
 
 	const preFetchedCartItemsCount = getSettingWithCoercion< number >(
 		'cartItemsCount',
@@ -201,13 +217,15 @@ const MiniCartBlock = ( {
 				} }
 				aria-label={ ariaLabel }
 			>
-				<span className="wc-block-mini-cart__amount">
-					{ formatPrice(
-						subTotal,
-						getCurrencyFromPriceResponse( cartTotals )
-					) }
-				</span>
-				{ taxLabel !== '' && subTotal !== 0 && (
+				{ ! hasHiddenPrice && (
+					<span className="wc-block-mini-cart__amount">
+						{ formatPrice(
+							subTotal,
+							getCurrencyFromPriceResponse( cartTotals )
+						) }
+					</span>
+				) }
+				{ taxLabel !== '' && subTotal !== 0 && ! hasHiddenPrice && (
 					<small className="wc-block-mini-cart__tax-label">
 						{ taxLabel }
 					</small>

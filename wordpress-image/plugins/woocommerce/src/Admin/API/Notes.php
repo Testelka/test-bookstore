@@ -40,7 +40,7 @@ class Notes extends \WC_REST_CRUD_Controller {
 	 * @var array
 	 */
 	protected $allowed_promo_notes = array(
-		'wcpay-promo-2022-3-incentive-100-off',
+		'wcpay-promo-2022-us-incentive-20-off',
 	);
 
 	/**
@@ -263,14 +263,12 @@ class Notes extends \WC_REST_CRUD_Controller {
 		$args['source']     = isset( $request['source'] ) ? $request['source'] : array();
 		$args['is_deleted'] = 0;
 
-		if ( 'date' === $args['orderby'] ) {
-			$args['orderby'] = 'date_created';
+		if ( isset( $request['is_read'] ) ) {
+			$args['is_read'] = filter_var( $request['is_read'], FILTER_VALIDATE_BOOLEAN );
 		}
 
-		// Hide selected notes for users not in experiment.
-		$is_tasklist_experiment_assigned_treatment = $this->is_tasklist_experiment_assigned_treatment();
-		if ( false === $is_tasklist_experiment_assigned_treatment ) {
-			$args['excluded_name'] = array( 'wc-admin-complete-store-details', 'wc-admin-update-store-details' );
+		if ( 'date' === $args['orderby'] ) {
+			$args['orderby'] = 'date_created';
 		}
 
 		/**
@@ -281,6 +279,7 @@ class Notes extends \WC_REST_CRUD_Controller {
 		 *
 		 * @param array           $args    Key value array of query var to query value.
 		 * @param WP_REST_Request $request The request used.
+		 * @since 3.9.0
 		 */
 		$args = apply_filters( 'woocommerce_rest_notes_object_query', $args, $request );
 
@@ -606,6 +605,7 @@ class Notes extends \WC_REST_CRUD_Controller {
 		 * @param WP_REST_Response $response The response object.
 		 * @param array            $data The original note.
 		 * @param WP_REST_Request  $request  Request used to generate the response.
+		 * @since 3.9.0
 		 */
 		return apply_filters( 'woocommerce_rest_prepare_note', $response, $data, $request );
 	}
@@ -816,6 +816,12 @@ class Notes extends \WC_REST_CRUD_Controller {
 				),
 				'is_deleted'        => array(
 					'description' => __( 'Registers whether the note is deleted or not', 'woocommerce' ),
+					'type'        => 'boolean',
+					'context'     => array( 'view', 'edit' ),
+					'readonly'    => true,
+				),
+				'is_read'           => array(
+					'description' => __( 'Registers whether the note is read or not', 'woocommerce' ),
 					'type'        => 'boolean',
 					'context'     => array( 'view', 'edit' ),
 					'readonly'    => true,

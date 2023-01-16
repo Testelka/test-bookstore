@@ -1,7 +1,10 @@
 <?php
 namespace Automattic\WooCommerce\Blocks\BlockTypes;
 
+use Automattic\WooCommerce\Blocks\Templates\ProductAttributeTemplate;
+use Automattic\WooCommerce\Blocks\Templates\ProductSearchResultsTemplate;
 use Automattic\WooCommerce\Blocks\Utils\StyleAttributesUtils;
+use WC_Query;
 
 /**
  * Classic Single Product class
@@ -23,24 +26,28 @@ class ClassicTemplate extends AbstractDynamicBlock {
 	 */
 	protected $api_version = '2';
 
+	const FILTER_PRODUCTS_BY_STOCK_QUERY_PARAM = 'filter_stock_status';
+
 	/**
 	 * Initialize this block.
 	 */
 	protected function initialize() {
 		parent::initialize();
 		add_filter( 'render_block', array( $this, 'add_alignment_class_to_wrapper' ), 10, 2 );
+		add_filter( 'woocommerce_product_query_meta_query', array( $this, 'filter_products_by_stock' ) );
+
 	}
 
 	/**
 	 * Render method for the Classic Template block. This method will determine which template to render.
 	 *
-	 * @param array  $attributes Block attributes.
-	 * @param string $content    Block content.
-	 *
+	 * @param array    $attributes Block attributes.
+	 * @param string   $content    Block content.
+	 * @param WP_Block $block      Block instance.
 	 * @return string | void Rendered block type output.
 	 */
-	protected function render( $attributes, $content ) {
-		if ( null === $attributes['template'] ) {
+	protected function render( $attributes, $content, $block ) {
+		if ( ! isset( $attributes['template'] ) ) {
 			return;
 		}
 
@@ -55,17 +62,23 @@ class ClassicTemplate extends AbstractDynamicBlock {
 			$frontend_scripts::load_scripts();
 		}
 
-		$archive_templates = array( 'archive-product', 'taxonomy-product_cat', 'taxonomy-product_tag' );
+		$archive_templates = array( 'archive-product', 'taxonomy-product_cat', 'taxonomy-product_tag', ProductAttributeTemplate::SLUG, ProductSearchResultsTemplate::SLUG );
 
 		if ( 'single-product' === $attributes['template'] ) {
 			return $this->render_single_product();
 		} elseif ( in_array( $attributes['template'], $archive_templates, true ) ) {
-			// We need to set this so that our product filters can detect if it's a PHP template.
+			// Set this so that our product filters can detect if it's a PHP template.
+			$this->asset_data_registry->add( 'is_rendering_php_template', true, true );
+
+			// Set this so filter blocks being used as widgets know when to render.
+			$this->asset_data_registry->add( 'has_filterable_products', true, true );
+
 			$this->asset_data_registry->add(
-				'is_rendering_php_template',
-				true,
-				null
+				'page_url',
+				html_entity_decode( get_pagenum_link() ),
+				''
 			);
+
 			return $this->render_archive_product();
 		} else {
 			ob_start();
@@ -223,7 +236,13 @@ class ClassicTemplate extends AbstractDynamicBlock {
 			return $content;
 		}
 
-		$attributes            = (array) $block['attrs'];
+		$attributes = (array) $block['attrs'];
+
+		// Set the default alignment to wide.
+		if ( ! isset( $attributes['align'] ) ) {
+			$attributes['align'] = 'wide';
+		}
+
 		$align_class_and_style = StyleAttributesUtils::get_align_class_and_style( $attributes );
 
 		if ( ! isset( $align_class_and_style['class'] ) ) {
@@ -246,5 +265,45 @@ class ClassicTemplate extends AbstractDynamicBlock {
 		return preg_replace( $pattern_get_class, '$0 ' . $align_class_and_style['class'], $content, 1 );
 	}
 
+
+	/**
+	 * Filter products by stock status when as query param there is "filter_stock_status"
+	 *
+	 * @param array $meta_query Meta query.
+	 * @return array
+	 */
+	public function filter_products_by_stock( $meta_query ) {
+		global $wp_query;
+
+		if (
+			is_admin() ||
+			! $wp_query->is_main_query() ||
+			! isset( $_GET[ self::FILTER_PRODUCTS_BY_STOCK_QUERY_PARAM ] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		) {
+			return $meta_query;
+		}
+
+		$stock_status = array_keys( wc_get_product_stock_status_options() );
+		$values       = sanitize_text_field( wp_unslash( $_GET[ self::FILTER_PRODUCTS_BY_STOCK_QUERY_PARAM ] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+
+		$values_to_array = explode( ',', $values );
+
+		$filtered_values = array_filter(
+			$values_to_array,
+			function( $value ) use ( $stock_status ) {
+				return in_array( $value, $stock_status, true );
+			}
+		);
+
+		if ( ! empty( $filtered_values ) ) {
+
+			$meta_query[] = array(
+				'key'     => '_stock_status',
+				'value'   => $filtered_values,
+				'compare' => 'IN',
+			);
+		}
+		return $meta_query;
+	}
 
 }

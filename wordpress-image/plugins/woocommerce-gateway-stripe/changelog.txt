@@ -1,5 +1,62 @@
 *** Changelog ***
 
+= 7.0.2 - 2023-01-11 =
+* Fix - Expand charges object from incoming webhooks using Stripe API version 2022-11-15.
+* Fix - Expand refunds on charge object from incoming webhooks using Stripe API version 2022-11-15.
+* Fix - Fix critical error on PHP 8+ when php_uname() is disabled
+
+= 7.0.1 - 2022-11-11 =
+* Fix - Issue where subscription renewal payments were being charged twice no longer present.
+
+= 7.0.0 - 2022-11-10 =
+* Add - Update Express Checkout section UI.
+* Add - Auto-complete first and last name on checkout form when using Link payment method.
+* Add - Allow subscription orders to be paid with Link payment method.
+* Add - Add inbox notification for Link payment method.
+* Tweak - Adjust texts and links in WC admin advanced settings.
+* Add - Restrict the Link payment method only for US merchants.
+
+= 6.9.0 - 2022-10-19 =
+* Tweak - Remove remaining traces of old Stripe settings.
+* Add - Add Boleto expiration setting.
+* Add - Declare incompatibility with HPOS.
+
+= 6.8.0 - 2022-09-28 =
+* Fix - Minor adjustments for Custom Order Tables compatibility.
+* Fix - Upgrade from Payment Element beta.
+
+= 6.7.0 - 2022-09-06 =
+* Fix - Check payment method before updating payment method title.
+* Fix - Use the eslint config at the root of the repo.
+
+= 6.6.0 - 2022-08-17 =
+* Fix - Fix "Pending" text instead of numeric amount on Payment Request button on iOS.
+
+= 6.5.1 - 2022-08-01 =
+* Fix - Stripe Link missing styles and logo for email trigger button.
+* Fix - Stripe Link fatal error on `get_upe_enabled_payment_method_ids` method.
+* Fix - Remove Link beta headers on checkout.
+
+= 6.5.0 - 2022-07-28 =
+* Add - Stripe Link: Add beta headers for Stripe server requests
+* Add - Stripe Link payment method option in admin
+* Add - Stripe Link payment method on checkout form
+* Add - Stripe Link payment method on blocks checkout form
+
+= 6.4.3 - 2022-06-30 =
+* Fix - Replace unnecessary throws with empty string when keys are invalid.
+
+= 6.4.2 - 2022-06-29 =
+* Fix - Fix terminal location creation if site title is missing.
+* Fix - Add compatibility with WooCommerce 6.6.
+
+= 6.4.1 - 2022-06-01 =
+* Fix - Ensure proper URL formatting.
+
+= 6.4.0 - 2022-05-20 =
+* Fix - Changed logic for how 'Enabled/Disabled' statuses are shown for payments and payouts capabilities in settings.
+* Tweak - Updated the minimum supported versions of WordPress and WooCommerce.
+
 = 6.3.0 - 2022-03-10 =
 * Tweak - Remove html from translatable strings.
 * Tweak - Revert the deprecation of the 'wc_stripe_hide_payment_request_on_product_page', 'wc_stripe_show_payment_request_on_checkout', and 'wc_stripe_show_payment_request_on_cart' filters.

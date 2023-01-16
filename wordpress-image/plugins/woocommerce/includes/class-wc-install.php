@@ -209,6 +209,22 @@ class WC_Install {
 		'6.5.1' => array(
 			'wc_update_651_approved_download_directories',
 		),
+		'6.7.0' => array(
+			'wc_update_670_purge_comments_count_cache',
+			'wc_update_670_delete_deprecated_remote_inbox_notifications_option',
+		),
+		'7.0.0' => array(
+			'wc_update_700_remove_download_log_fk',
+			'wc_update_700_remove_recommended_marketing_plugins_transient',
+		),
+		'7.2.1' => array(
+			'wc_update_721_adjust_new_zealand_states',
+			'wc_update_721_adjust_ukraine_states',
+		),
+		'7.2.2' => array(
+			'wc_update_722_adjust_new_zealand_states',
+			'wc_update_722_adjust_ukraine_states',
+		),
 	);
 
 	/**
@@ -240,10 +256,20 @@ class WC_Install {
 		$requires_update = version_compare( $wc_version, $wc_code_version, '<' );
 		if ( ! Constants::is_defined( 'IFRAME_REQUEST' ) && $requires_update ) {
 			self::install();
+			/**
+			 * Run after WooCommerce has been updated.
+			 *
+			 * @since 2.2.0
+			 */
 			do_action( 'woocommerce_updated' );
 			do_action_deprecated( 'woocommerce_admin_updated', array(), $wc_code_version, 'woocommerce_updated' );
 			// If there is no woocommerce_version option, consider it as a new install.
 			if ( ! $wc_version ) {
+				/**
+				 * Run when WooCommerce has been installed for the first time.
+				 *
+				 * @since 6.5.0
+				 */
 				do_action( 'woocommerce_newly_installed' );
 				do_action_deprecated( 'woocommerce_admin_newly_installed', array(), $wc_code_version, 'woocommerce_newly_installed' );
 			}
@@ -382,8 +408,23 @@ class WC_Install {
 		// plugin version update. We base plugin age off of this value.
 		add_option( 'woocommerce_admin_install_timestamp', time() );
 
+		/**
+		 * Flush the rewrite rules after install or update.
+		 *
+		 * @since 2.7.0
+		 */
 		do_action( 'woocommerce_flush_rewrite_rules' );
+		/**
+		 * Run after WooCommerce has been installed or updated.
+		 *
+		 * @since 3.2.0
+		 */
 		do_action( 'woocommerce_installed' );
+		/**
+		 * Run after WooCommerce Admin has been installed or updated.
+		 *
+		 * @since 6.5.0
+		 */
 		do_action( 'woocommerce_admin_installed' );
 	}
 
@@ -499,6 +540,11 @@ class WC_Install {
 	 */
 	private static function maybe_update_db_version() {
 		if ( self::needs_db_update() ) {
+			/**
+			 * Allow WooCommerce to auto-update without prompting the user.
+			 *
+			 * @since 3.2.0
+			 */
 			if ( apply_filters( 'woocommerce_enable_auto_update_db', false ) ) {
 				self::update();
 			} else {
@@ -612,6 +658,11 @@ class WC_Install {
 		$held_duration = get_option( 'woocommerce_hold_stock_minutes', '60' );
 
 		if ( '' !== $held_duration ) {
+			/**
+			 * Determines the interval at which to cancel unpaid orders in minutes.
+			 *
+			 * @since 5.1.0
+			 */
 			$cancel_unpaid_interval = apply_filters( 'woocommerce_cancel_unpaid_orders_interval_minutes', absint( $held_duration ) );
 			wp_schedule_single_event( time() + ( absint( $cancel_unpaid_interval ) * 60 ), 'woocommerce_cancel_unpaid_orders' );
 		}
@@ -624,6 +675,11 @@ class WC_Install {
 		wp_schedule_event( time() + ( 3 * HOUR_IN_SECONDS ), 'daily', 'woocommerce_cleanup_logs' );
 		wp_schedule_event( time() + ( 6 * HOUR_IN_SECONDS ), 'twicedaily', 'woocommerce_cleanup_sessions' );
 		wp_schedule_event( time() + MINUTE_IN_SECONDS, 'fifteendays', 'woocommerce_geoip_updater' );
+		/**
+		 * How frequent to schedule the tracker send event.
+		 *
+		 * @since 2.3.0
+		 */
 		wp_schedule_event( time() + 10, apply_filters( 'woocommerce_tracker_event_recurrence', 'daily' ), 'woocommerce_tracker_send_event' );
 		wp_schedule_event( time() + ( 3 * HOUR_IN_SECONDS ), 'daily', 'woocommerce_cleanup_rate_limits' );
 
@@ -649,6 +705,32 @@ class WC_Install {
 	public static function create_pages() {
 		include_once dirname( __FILE__ ) . '/admin/wc-admin-functions.php';
 
+		/**
+		 * Determines the cart shortcode tag used for the cart page.
+		 *
+		 * @since 2.1.0
+		 */
+		$cart_shortcode = apply_filters( 'woocommerce_cart_shortcode_tag', 'woocommerce_cart' );
+
+		/**
+		 * Determines the checkout shortcode tag used on the checkout page.
+		 *
+		 * @since 2.1.0
+		 */
+		$checkout_shortcode = apply_filters( 'woocommerce_checkout_shortcode_tag', 'woocommerce_checkout' );
+
+		/**
+		 * Determines the my account shortcode tag used on the my account page.
+		 *
+		 * @since 2.1.0
+		 */
+		$my_account_shortcode = apply_filters( 'woocommerce_my_account_shortcode_tag', 'woocommerce_my_account' );
+
+		/**
+		 * Determines which pages are created during install.
+		 *
+		 * @since 2.1.0
+		 */
 		$pages = apply_filters(
 			'woocommerce_create_pages',
 			array(
@@ -660,17 +742,17 @@ class WC_Install {
 				'cart'           => array(
 					'name'    => _x( 'cart', 'Page slug', 'woocommerce' ),
 					'title'   => _x( 'Cart', 'Page title', 'woocommerce' ),
-					'content' => '<!-- wp:shortcode -->[' . apply_filters( 'woocommerce_cart_shortcode_tag', 'woocommerce_cart' ) . ']<!-- /wp:shortcode -->',
+					'content' => '<!-- wp:shortcode -->[' . $cart_shortcode . ']<!-- /wp:shortcode -->',
 				),
 				'checkout'       => array(
 					'name'    => _x( 'checkout', 'Page slug', 'woocommerce' ),
 					'title'   => _x( 'Checkout', 'Page title', 'woocommerce' ),
-					'content' => '<!-- wp:shortcode -->[' . apply_filters( 'woocommerce_checkout_shortcode_tag', 'woocommerce_checkout' ) . ']<!-- /wp:shortcode -->',
+					'content' => '<!-- wp:shortcode -->[' . $checkout_shortcode . ']<!-- /wp:shortcode -->',
 				),
 				'myaccount'      => array(
 					'name'    => _x( 'my-account', 'Page slug', 'woocommerce' ),
 					'title'   => _x( 'My account', 'Page title', 'woocommerce' ),
-					'content' => '<!-- wp:shortcode -->[' . apply_filters( 'woocommerce_my_account_shortcode_tag', 'woocommerce_my_account' ) . ']<!-- /wp:shortcode -->',
+					'content' => '<!-- wp:shortcode -->[' . $my_account_shortcode . ']<!-- /wp:shortcode -->',
 				),
 				'refund_returns' => array(
 					'name'        => _x( 'refund_returns', 'Page slug', 'woocommerce' ),
@@ -705,7 +787,7 @@ class WC_Install {
 		$settings = WC_Admin_Settings::get_settings_pages();
 
 		foreach ( $settings as $section ) {
-			if ( ! method_exists( $section, 'get_settings' ) ) {
+			if ( ! is_a( $section, 'WC_Settings_Page' ) || ! method_exists( $section, 'get_settings' ) ) {
 				continue;
 			}
 			$subsections = array_unique( array_merge( array( '' ), array_keys( $section->get_sections() ) ) );
@@ -748,17 +830,24 @@ class WC_Install {
 		global $wpdb;
 		$obsolete_notes_names = array(
 			'wc-admin-welcome-note',
+			'wc-admin-insight-first-product-and-payment',
 			'wc-admin-store-notice-setting-moved',
 			'wc-admin-store-notice-giving-feedback',
+			'wc-admin-first-downloadable-product',
 			'wc-admin-learn-more-about-product-settings',
+			'wc-admin-adding-and-managing-products',
 			'wc-admin-onboarding-profiler-reminder',
 			'wc-admin-historical-data',
+			'wc-admin-manage-store-activity-from-home-screen',
 			'wc-admin-review-shipping-settings',
 			'wc-admin-home-screen-feedback',
+			'wc-admin-update-store-details',
 			'wc-admin-effortless-payments-by-mollie',
 			'wc-admin-google-ads-and-marketing',
+			'wc-admin-insight-first-sale',
 			'wc-admin-marketing-intro',
 			'wc-admin-draw-attention',
+			'wc-admin-welcome-to-woocommerce-for-store-users',
 			'wc-admin-need-some-inspiration',
 			'wc-admin-choose-niche',
 			'wc-admin-start-dropshipping-business',
@@ -767,8 +856,16 @@ class WC_Install {
 			'wc-admin-getting-started-ecommerce-webinar',
 			'wc-admin-navigation-feedback',
 			'wc-admin-navigation-feedback-follow-up',
+			'wc-admin-set-up-additional-payment-types',
+			'wc-admin-deactivate-plugin',
+			'wc-admin-complete-store-details',
 		);
 
+		/**
+		 * An array of deprecated notes to delete on update.
+		 *
+		 * @since 6.5.0
+		 */
 		$additional_obsolete_notes_names = apply_filters(
 			'woocommerce_admin_obsolete_notes_names',
 			array()
@@ -942,32 +1039,6 @@ class WC_Install {
 			// Add an index to the field comment_type to improve the response time of the query
 			// used by WC_Comments::wp_count_comments() to get the number of comments by type.
 			$wpdb->query( "ALTER TABLE {$wpdb->comments} ADD INDEX woo_idx_comment_type (comment_type)" );
-		}
-
-		// Get tables data types and check it matches before adding constraint.
-		$download_log_columns     = $wpdb->get_results( "SHOW COLUMNS FROM {$wpdb->prefix}wc_download_log WHERE Field = 'permission_id'", ARRAY_A );
-		$download_log_column_type = '';
-		if ( isset( $download_log_columns[0]['Type'] ) ) {
-			$download_log_column_type = $download_log_columns[0]['Type'];
-		}
-
-		$download_permissions_columns     = $wpdb->get_results( "SHOW COLUMNS FROM {$wpdb->prefix}woocommerce_downloadable_product_permissions WHERE Field = 'permission_id'", ARRAY_A );
-		$download_permissions_column_type = '';
-		if ( isset( $download_permissions_columns[0]['Type'] ) ) {
-			$download_permissions_column_type = $download_permissions_columns[0]['Type'];
-		}
-
-		// Add constraint to download logs if the columns matches.
-		if ( ! empty( $download_permissions_column_type ) && ! empty( $download_log_column_type ) && $download_permissions_column_type === $download_log_column_type ) {
-			$fk_result = $wpdb->get_row( "SHOW CREATE TABLE {$wpdb->prefix}wc_download_log" );
-			if ( false === strpos( $fk_result->{'Create Table'}, "fk_{$wpdb->prefix}wc_download_log_permission_id" ) ) {
-				$wpdb->query(
-					"ALTER TABLE `{$wpdb->prefix}wc_download_log`
-					ADD CONSTRAINT `fk_{$wpdb->prefix}wc_download_log_permission_id`
-					FOREIGN KEY (`permission_id`)
-					REFERENCES `{$wpdb->prefix}woocommerce_downloadable_product_permissions` (`permission_id`) ON DELETE CASCADE;"
-				);
-			}
 		}
 
 		// Clear table caches.
@@ -1404,6 +1475,7 @@ CREATE TABLE {$wpdb->prefix}wc_category_lookup (
 		 * If WooCommerce plugins need to add new tables, they can inject them here.
 		 *
 		 * @param array $tables An array of WooCommerce-specific database table names.
+		 * @since 3.4.0
 		 */
 		$tables = apply_filters( 'woocommerce_install_get_tables', $tables );
 
@@ -1597,7 +1669,11 @@ CREATE TABLE {$wpdb->prefix}wc_category_lookup (
 	 * Create files/directories.
 	 */
 	private static function create_files() {
-		// Bypass if filesystem is read-only and/or non-standard upload system is used.
+		/**
+		 * Bypass if filesystem is read-only and/or non-standard upload system is used.
+		 *
+		 * @since 3.2.0
+		 */
 		if ( apply_filters( 'woocommerce_install_skip_create_files', false ) ) {
 			return;
 		}
@@ -1726,14 +1802,42 @@ CREATE TABLE {$wpdb->prefix}wc_category_lookup (
 			return $links;
 		}
 
+		/**
+		 * The WooCommerce documentation URL.
+		 *
+		 * @since 2.7.0
+		 */
+		$docs_url = apply_filters( 'woocommerce_docs_url', 'https://docs.woocommerce.com/documentation/plugins/woocommerce/' );
+
+		/**
+		 * The WooCommerce API documentation URL.
+		 *
+		 * @since 2.2.0
+		 */
+		$api_docs_url = apply_filters( 'woocommerce_apidocs_url', 'https://docs.woocommerce.com/wc-apidocs/' );
+
+		/**
+		 * The community WooCommerce support URL.
+		 *
+		 * @since 2.2.0
+		 */
+		$community_support_url = apply_filters( 'woocommerce_community_support_url', 'https://wordpress.org/support/plugin/woocommerce/' );
+
+		/**
+		 * The premium support URL.
+		 *
+		 * @since
+		 */
+		$support_url = apply_filters( 'woocommerce_support_url', 'https://woocommerce.com/my-account/create-a-ticket/' );
+
 		$row_meta = array(
-			'docs'    => '<a href="' . esc_url( apply_filters( 'woocommerce_docs_url', 'https://docs.woocommerce.com/documentation/plugins/woocommerce/' ) ) . '" aria-label="' . esc_attr__( 'View WooCommerce documentation', 'woocommerce' ) . '">' . esc_html__( 'Docs', 'woocommerce' ) . '</a>',
-			'apidocs' => '<a href="' . esc_url( apply_filters( 'woocommerce_apidocs_url', 'https://docs.woocommerce.com/wc-apidocs/' ) ) . '" aria-label="' . esc_attr__( 'View WooCommerce API docs', 'woocommerce' ) . '">' . esc_html__( 'API docs', 'woocommerce' ) . '</a>',
-			'support' => '<a href="' . esc_url( apply_filters( 'woocommerce_community_support_url', 'https://wordpress.org/support/plugin/woocommerce/' ) ) . '" aria-label="' . esc_attr__( 'Visit community forums', 'woocommerce' ) . '">' . esc_html__( 'Community support', 'woocommerce' ) . '</a>',
+			'docs'    => '<a href="' . esc_url( $docs_url ) . '" aria-label="' . esc_attr__( 'View WooCommerce documentation', 'woocommerce' ) . '">' . esc_html__( 'Docs', 'woocommerce' ) . '</a>',
+			'apidocs' => '<a href="' . esc_url( $api_docs_url ) . '" aria-label="' . esc_attr__( 'View WooCommerce API docs', 'woocommerce' ) . '">' . esc_html__( 'API docs', 'woocommerce' ) . '</a>',
+			'support' => '<a href="' . esc_url( $community_support_url ) . '" aria-label="' . esc_attr__( 'Visit community forums', 'woocommerce' ) . '">' . esc_html__( 'Community support', 'woocommerce' ) . '</a>',
 		);
 
 		if ( WCConnectionHelper::is_connected() ) {
-			$row_meta['premium_support'] = '<a href="' . esc_url( apply_filters( 'woocommerce_support_url', 'https://woocommerce.com/my-account/create-a-ticket/' ) ) . '" aria-label="' . esc_attr__( 'Visit premium customer support', 'woocommerce' ) . '">' . esc_html__( 'Premium support', 'woocommerce' ) . '</a>';
+			$row_meta['premium_support'] = '<a href="' . esc_url( $support_url ) . '" aria-label="' . esc_attr__( 'Visit premium customer support', 'woocommerce' ) . '">' . esc_html__( 'Premium support', 'woocommerce' ) . '</a>';
 		}
 
 		return array_merge( $links, $row_meta );

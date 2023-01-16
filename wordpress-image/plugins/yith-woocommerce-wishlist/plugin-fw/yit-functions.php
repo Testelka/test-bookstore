@@ -1756,8 +1756,13 @@ if ( ! function_exists( 'yith_plugin_fw_add_utm_data' ) ) {
 	 *
 	 * @since 3.6.10
 	 */
-	function yith_plugin_fw_add_utm_data( $url, $slug, $campaign = 'plugin-version-author-uri', $source = 'wp-dashboard' ) {
+	function yith_plugin_fw_add_utm_data( $url, $slug, $campaign = 'plugin-version-author-uri', $source = false ) {
 		$url = trailingslashit( $url );
+
+		if ( ! $source ) {
+			$source = yith_plugin_fw_panel_utm_source();
+		}
+
 		if ( ! empty( $slug ) ) {
 			$utm_track_data = array(
 				'utm_source'   => $source,
@@ -1769,6 +1774,27 @@ if ( ! function_exists( 'yith_plugin_fw_add_utm_data' ) ) {
 		}
 
 		return $url;
+	}
+}
+
+if ( ! function_exists( 'yith_plugin_fw_panel_utm_source' ) ) {
+	/**
+	 * Generates default UTM source for the dashboard
+	 *
+	 * @param YIT_Plugin_Panel $panel Panel object.
+	 *
+	 * @since 3.6.10
+	 */
+	function yith_plugin_fw_panel_utm_source( $panel = false ) {
+		if ( $panel->is_free() ) {
+			return 'wp-free-dashboard';
+		}
+
+		if ( $panel->is_extended() ) {
+			return 'wp-extended-dashboard';
+		}
+
+		return 'wp-dashboard';
 	}
 }
 

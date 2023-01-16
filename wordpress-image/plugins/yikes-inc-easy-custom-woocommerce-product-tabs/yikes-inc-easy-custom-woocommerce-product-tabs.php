@@ -1,18 +1,19 @@
 <?php
 /**
  * Plugin Name: Custom Product Tabs for WooCommerce
- * Plugin URI: http://www.yikesinc.com
+ * Plugin URI: https://www.yikesinc.com
  * Description: Extend WooCommerce to add and manage custom product tabs. Create as many product tabs as needed per product.
  * Author: YIKES, Inc.
- * Author URI: http://www.yikesinc.com
- * Version: 1.7.7
+ * Author URI: https://www.yikesinc.com
+ * Version: 1.8.2
  * Text Domain: yikes-inc-easy-custom-woocommerce-product-tabs
  * Domain Path: languages/
+ * Tested up to: 6.1
  *
  * WC requires at least: 3.0.0
- * WC tested up to: 4.6
+ * WC tested up to: 7.0
  *
- * Copyright: (c) 2014-2015 YIKES Inc.
+ * Copyright: (c) 2014-2022 YIKES Inc.
  *
  * License: GNU General Public License v3.0
  * License URI: http://www.gnu.org/licenses/gpl-3.0.html
@@ -21,7 +22,9 @@
  */
 
 // Exit if accessed directly.
-if ( ! defined( 'ABSPATH' ) ) exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 // Must include plugin.php to use is_plugin_active().
 require_once ABSPATH . 'wp-admin/includes/plugin.php';
@@ -38,7 +41,7 @@ if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) {
  * Display our error admin notice if WooCommerce is not installed + active.
  */
 function yikes_woo_display_admin_notice_error() {
-	?>	
+	?>
 		<!-- hide the 'Plugin Activated' default message -->
 		<style>
 		#message.updated {
@@ -49,13 +52,28 @@ function yikes_woo_display_admin_notice_error() {
 		<div class="error">
 			<p>
 				<?php
-				esc_html_e( 'Custom Product Tabs for WooCommerce could not be activated because WooCommerce is not installed and active.', 'yikes-inc-easy-custom-woocommerce-product-tabs' );
-				?>
-				</p>
-			<p>
-				<?php
-				/* translators: The placeholder is a URL to the WooCommerce plugin. */
-				echo sprintf( esc_html( 'Please install and activate %1s before activating the plugin.', 'yikes-inc-easy-custom-woocommerce-product-tabs' ), '<a href="' . esc_url( admin_url( 'plugin-install.php?tab=search&type=term&s=WooCommerce' ) ) . '" title="WooCommerce">WooCommerce</a>' );
+				$message = sprintf(
+					/* translators: The placeholder is a URL to the WooCommerce plugin. */
+					__( 'Please install and activate %1s before activating Custom WooCommerce Product Tabs.', 'yikes-inc-easy-custom-woocommerce-product-tabs' ),
+					'<a href="' . esc_url( admin_url( 'plugin-install.php?tab=search&type=term&s=WooCommerce' ) ) . '" title="WooCommerce">WooCommerce</a>'
+				);
+
+				if ( file_exists( WP_PLUGIN_DIR . '/woocommerce/woocommerce.php' ) ) {
+					$activate_url = add_query_arg(
+						array(
+							'action'   => 'activate',
+							'plugin'   => 'woocommerce/woocommerce.php',
+							'_wpnonce' => wp_create_nonce( 'activate-plugin_woocommerce/woocommerce.php' )
+						),
+						admin_url( 'plugins.php' )
+					);
+					$message = sprintf(
+						/* translators: The placeholder is a URL to the WooCommerce plugin. */
+						__( 'Please activate %1s before activating Custom WooCommerce Product Tabs.', 'yikes-inc-easy-custom-woocommerce-product-tabs' ),
+						'<a href="' . esc_url( $activate_url ) . '" title="WooCommerce">WooCommerce</a>'
+					);
+				}
+				echo $message;
 				?>
 			</p>
 		</div>
@@ -105,7 +123,14 @@ class YIKES_Custom_Product_Tabs {
 		 * Define the plugin's version.
 		 */
 		if ( ! defined( 'YIKES_Custom_Product_Tabs_Version' ) ) {
-			define( 'YIKES_Custom_Product_Tabs_Version', '1.7.7' );
+			define( 'YIKES_Custom_Product_Tabs_Version', '1.8.2' );
+		}
+
+		/**
+		 * Define the bundled lity.js version
+		 */
+		if ( ! defined( 'YIKES_Custom_Product_LITY_Version' ) ) {
+			define( 'YIKES_Custom_Product_LITY_Version', '2.4.1' );
 		}
 
 		/**
@@ -217,9 +242,9 @@ class YIKES_Custom_Product_Tabs {
 		// Fetch all of the post meta items where meta_key = 'yikes_woo_products_tabs'.
 		$yikes_woo_products_tabs = $wpdb->get_results(
 			"
-			SELECT * 
+			SELECT *
 			FROM {$wpdb->postmeta}
-			WHERE meta_key = 'yikes_woo_products_tabs' 
+			WHERE meta_key = 'yikes_woo_products_tabs'
 			"
 		);
 
@@ -267,6 +292,8 @@ class YIKES_Custom_Product_Tabs {
 
 		// Add settings link to plugin on plugins page.
 		add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), array( $this, 'add_plugin_action_links' ), 10, 1 );
+
+		add_filter( 'admin_footer_text', array( $this, 'yikes_custom_product_tabs_admin_footer_text' ) );
 	}
 
 	/**
@@ -279,9 +306,47 @@ class YIKES_Custom_Product_Tabs {
 	 * @return array $links The $links array, with our saved tabs page appended.
 	 */
 	public function add_plugin_action_links( $links ) {
-		$href    = esc_url_raw( add_query_arg( array( 'page' => YIKES_Custom_Product_Tabs_Settings_Page ), admin_url() ) );
-		$links[] = '<a href="' . $href . '">Saved Tabs</a>';
+		$href     = add_query_arg( array( 'page' => YIKES_Custom_Product_Tabs_Settings_Page ), admin_url( 'admin.php' ) );
+		$docs_url = 'https://yikesplugins.com/article-category/custom-product-tabs-for-woocommerce/';
+
+		$links[] = '<a href="' . esc_url_raw( $href ) . '">' . esc_html__( 'Saved Tabs', 'yikes-inc-easy-custom-woocommerce-product-tabs' ) . '</a>';
+		$links[] = '<a href="' . esc_url_raw( $docs_url ) . '" target="_blank">' . esc_html__( 'Documentation', 'yikes-inc-easy-custom-woocommerce-product-tabs' ) . '</a>';
+
 		return $links;
+	}
+
+	/**
+	 * Admin footer text on Yikes pages.
+	 *
+	 * @param string $footer_text Admin footer text.
+	 *
+	 * @return string Filtered admin footer text.
+	 */
+	public function yikes_custom_product_tabs_admin_footer_text( $footer_text ) {
+
+		$page = filter_input( INPUT_GET, 'page', FILTER_SANITIZE_STRING );
+
+		$allowed_pages = array(
+			'yikes-woo-settings',
+			'yikes-woo-support',
+			'yikes-woo-premium',
+		);
+
+		if ( ! $page || ! in_array( $page, $allowed_pages, true ) ) {
+
+			return $footer_text;
+
+		}
+
+		$stars = '<a href="https://wordpress.org/support/plugin/yikes-inc-easy-custom-woocommerce-product-tabs/reviews/" alt="Custom Product Tabs for WooCommerce | WordPress.org" target="_blank"><span class="dashicons dashicons-star-filled yikes-star"></span><span class="dashicons dashicons-star-filled yikes-star"></span><span class="dashicons dashicons-star-filled yikes-star"></span><span class="dashicons dashicons-star-filled yikes-star"></span><span class="dashicons dashicons-star-filled yikes-star"></span></a>';
+
+		$footer_text = sprintf(
+			__( 'Thank you for using Custom Product Tabs for WooCommerce. Please consider leaving us %s on the WordPress.org plugin repository.', 'yikes-inc-easy-custom-woocommerce-product-tabs' ),
+			$stars
+		);
+
+		return wp_kses_post( $footer_text );
+
 	}
 
 	/**

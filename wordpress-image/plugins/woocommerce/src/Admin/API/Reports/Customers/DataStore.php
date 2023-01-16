@@ -12,6 +12,7 @@ use \Automattic\WooCommerce\Admin\API\Reports\DataStoreInterface;
 use \Automattic\WooCommerce\Admin\API\Reports\TimeInterval;
 use \Automattic\WooCommerce\Admin\API\Reports\SqlQuery;
 use \Automattic\WooCommerce\Admin\API\Reports\Cache as ReportsCache;
+use Automattic\WooCommerce\Utilities\OrderUtil;
 
 /**
  * Admin\API\Reports\Customers\DataStore.
@@ -64,7 +65,7 @@ class DataStore extends ReportsDataStore implements DataStoreInterface {
 			'id'               => "{$table_name}.customer_id as id",
 			'user_id'          => 'user_id',
 			'username'         => 'username',
-			'name'             => "CONCAT_WS( ' ', first_name, last_name ) as name", // @todo What does this mean for RTL?
+			'name'             => "CONCAT_WS( ' ', first_name, last_name ) as name", // @xxx: What does this mean for RTL?
 			'email'            => 'email',
 			'country'          => 'country',
 			'city'             => 'city',
@@ -122,7 +123,7 @@ class DataStore extends ReportsDataStore implements DataStoreInterface {
 	public static function sync_order_customer( $post_id ) {
 		global $wpdb;
 
-		if ( 'shop_order' !== get_post_type( $post_id ) && 'shop_order_refund' !== get_post_type( $post_id ) ) {
+		if ( ! OrderUtil::is_order( $post_id, array( 'shop_order', 'shop_order_refund' ) ) ) {
 			return -1;
 		}
 
@@ -145,6 +146,7 @@ class DataStore extends ReportsDataStore implements DataStoreInterface {
 		 * Fires when a customer is updated.
 		 *
 		 * @param int $customer_id Customer ID.
+		 * @since 4.0.0
 		 */
 		do_action( 'woocommerce_analytics_update_customer', $customer_id );
 
@@ -301,6 +303,12 @@ class DataStore extends ReportsDataStore implements DataStoreInterface {
 		if ( ! empty( $query_args['customers'] ) ) {
 			$included_customers = $this->get_filtered_ids( $query_args, 'customers' );
 			$where_clauses[]    = "{$customer_lookup_table}.customer_id IN ({$included_customers})";
+		}
+
+		// Allow a list of user IDs to be specified.
+		if ( ! empty( $query_args['users'] ) ) {
+			$included_users  = $this->get_filtered_ids( $query_args, 'users' );
+			$where_clauses[] = "{$customer_lookup_table}.user_id IN ({$included_users})";
 		}
 
 		$numeric_params = array(
@@ -518,6 +526,7 @@ class DataStore extends ReportsDataStore implements DataStoreInterface {
 		 * Fires when a new report customer is created.
 		 *
 		 * @param int $customer_id Customer ID.
+		 * @since 4.0.0
 		 */
 		do_action( 'woocommerce_analytics_new_customer', $customer_id );
 
@@ -757,6 +766,7 @@ class DataStore extends ReportsDataStore implements DataStoreInterface {
 		 * Fires when customser's reports are updated.
 		 *
 		 * @param int $customer_id Customer ID.
+		 * @since 4.0.0
 		 */
 		do_action( 'woocommerce_analytics_update_customer', $customer_id );
 
@@ -778,6 +788,12 @@ class DataStore extends ReportsDataStore implements DataStoreInterface {
 			return false;
 		}
 
+		/**
+		 * Filter the customer roles, used to check if the user is a customer.
+		 *
+		 * @param array List of customer roles.
+		 * @since 4.0.0
+		 */
 		$customer_roles = (array) apply_filters( 'woocommerce_analytics_customer_roles', array( 'customer' ) );
 
 		if ( empty( $user->roles ) || empty( array_intersect( $user->roles, $customer_roles ) ) ) {
@@ -803,6 +819,7 @@ class DataStore extends ReportsDataStore implements DataStoreInterface {
 			 * Fires when a customer is deleted.
 			 *
 			 * @param int $order_id Order ID.
+			 * @since 4.0.0
 			 */
 			do_action( 'woocommerce_analytics_delete_customer', $customer_id );
 

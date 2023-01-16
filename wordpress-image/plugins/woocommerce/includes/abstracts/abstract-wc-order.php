@@ -51,6 +51,18 @@ abstract class WC_Abstract_Order extends WC_Abstract_Legacy_Order {
 	);
 
 	/**
+	 * List of properties that were earlier managed by data store. However, since DataStore is a not a stored entity in itself, they used to store data in metadata of the data object.
+	 * With custom tables, some of these are moved from metadata to their own columns, but existing code will still try to add them to metadata. This array is used to keep track of such properties.
+	 *
+	 * Only reason to add a property here is that you are moving properties from DataStore instance to data object. If you are adding a new property, consider adding it to to $data array instead.
+	 *
+	 * @var array
+	 */
+	protected $legacy_datastore_props = array(
+		'_recorded_coupon_usage_counts',
+	);
+
+	/**
 	 * Order items will be stored here, sometimes before they persist in the DB.
 	 *
 	 * @since 3.0.0
@@ -516,6 +528,29 @@ abstract class WC_Abstract_Order extends WC_Abstract_Legacy_Order {
 		return false;
 	}
 
+	/**
+	 * Gets information about whether coupon counts were updated.
+	 *
+	 * @param string $context What the value is for. Valid values are view and edit.
+	 *
+	 * @return bool True if coupon counts were updated, false otherwise.
+	 */
+	public function get_recorded_coupon_usage_counts( $context = 'view' ) {
+		return wc_string_to_bool( $this->get_prop( 'recorded_coupon_usage_counts', $context ) );
+	}
+
+	/**
+	 * Get basic order data in array format.
+	 *
+	 * @return array
+	 */
+	public function get_base_data() {
+		return array_merge(
+			array( 'id' => $this->get_id() ),
+			$this->data
+		);
+	}
+
 	/*
 	|--------------------------------------------------------------------------
 	| Setters
@@ -635,7 +670,7 @@ abstract class WC_Abstract_Order extends WC_Abstract_Legacy_Order {
 	 * @throws WC_Data_Exception Exception may be thrown if value is invalid.
 	 */
 	public function set_discount_total( $value ) {
-		$this->set_prop( 'discount_total', wc_format_decimal( $value ) );
+		$this->set_prop( 'discount_total', wc_format_decimal( $value, false, true ) );
 	}
 
 	/**
@@ -645,7 +680,7 @@ abstract class WC_Abstract_Order extends WC_Abstract_Legacy_Order {
 	 * @throws WC_Data_Exception Exception may be thrown if value is invalid.
 	 */
 	public function set_discount_tax( $value ) {
-		$this->set_prop( 'discount_tax', wc_format_decimal( $value ) );
+		$this->set_prop( 'discount_tax', wc_format_decimal( $value, false, true ) );
 	}
 
 	/**
@@ -655,7 +690,7 @@ abstract class WC_Abstract_Order extends WC_Abstract_Legacy_Order {
 	 * @throws WC_Data_Exception Exception may be thrown if value is invalid.
 	 */
 	public function set_shipping_total( $value ) {
-		$this->set_prop( 'shipping_total', wc_format_decimal( $value ) );
+		$this->set_prop( 'shipping_total', wc_format_decimal( $value, false, true ) );
 	}
 
 	/**
@@ -665,7 +700,7 @@ abstract class WC_Abstract_Order extends WC_Abstract_Legacy_Order {
 	 * @throws WC_Data_Exception Exception may be thrown if value is invalid.
 	 */
 	public function set_shipping_tax( $value ) {
-		$this->set_prop( 'shipping_tax', wc_format_decimal( $value ) );
+		$this->set_prop( 'shipping_tax', wc_format_decimal( $value, false, true ) );
 		$this->set_total_tax( (float) $this->get_cart_tax() + (float) $this->get_shipping_tax() );
 	}
 
@@ -676,7 +711,7 @@ abstract class WC_Abstract_Order extends WC_Abstract_Legacy_Order {
 	 * @throws WC_Data_Exception Exception may be thrown if value is invalid.
 	 */
 	public function set_cart_tax( $value ) {
-		$this->set_prop( 'cart_tax', wc_format_decimal( $value ) );
+		$this->set_prop( 'cart_tax', wc_format_decimal( $value, false, true ) );
 		$this->set_total_tax( (float) $this->get_cart_tax() + (float) $this->get_shipping_tax() );
 	}
 
@@ -706,6 +741,17 @@ abstract class WC_Abstract_Order extends WC_Abstract_Legacy_Order {
 			return $this->legacy_set_total( $value, $deprecated );
 		}
 		$this->set_prop( 'total', wc_format_decimal( $value, wc_get_price_decimals() ) );
+	}
+
+	/**
+	 * Stores information about whether the coupon usage were counted.
+	 *
+	 * @param bool|string $value True if counted, false if not.
+	 *
+	 * @return void
+	 */
+	public function set_recorded_coupon_usage_counts( $value ) {
+		$this->set_prop( 'recorded_coupon_usage_counts', wc_string_to_bool( $value ) );
 	}
 
 	/*
@@ -1165,6 +1211,16 @@ abstract class WC_Abstract_Order extends WC_Abstract_Legacy_Order {
 			}
 		}
 
+		/**
+		 * Action to signal that a coupon has been applied to an order.
+		 *
+		 * @param  WC_Coupon $coupon The applied coupon object.
+		 * @param  WC_Order  $order  The current order object.
+		 *
+		 * @since 7.3
+		 */
+		do_action( 'woocommerce_order_applied_coupon', $coupon, $this );
+
 		$this->set_coupon_discount_amounts( $discounts );
 		$this->save();
 
@@ -1549,6 +1605,29 @@ abstract class WC_Abstract_Order extends WC_Abstract_Legacy_Order {
 				'city'     => 'billing' === $tax_based_on ? $this->get_billing_city() : $this->get_shipping_city(),
 			)
 		);
+
+		/**
+		 * Filters whether apply base tax for local pickup shipping method or not.
+		 *
+		 * @since 6.8.0
+		 * @param boolean apply_base_tax Whether apply base tax for local pickup. Default true.
+		 */
+		$apply_base_tax = true === apply_filters( 'woocommerce_apply_base_tax_for_local_pickup', true );
+
+		/**
+		 * Filters local pickup shipping methods.
+		 *
+		 * @since 6.8.0
+		 * @param string[] $local_pickup_methods Local pickup shipping method IDs.
+		 */
+		$local_pickup_methods = apply_filters( 'woocommerce_local_pickup_methods', array( 'legacy_local_pickup', 'local_pickup' ) );
+
+		$shipping_method_ids = ArrayUtil::select( $this->get_shipping_methods(), 'get_method_id', ArrayUtil::SELECT_BY_OBJECT_METHOD );
+
+		// Set shop base address as a tax location if order has local pickup shipping method.
+		if ( $apply_base_tax && count( array_intersect( $shipping_method_ids, $local_pickup_methods ) ) > 0 ) {
+			$tax_based_on = 'base';
+		}
 
 		// Default to base.
 		if ( 'base' === $tax_based_on || empty( $args['country'] ) ) {
@@ -2226,5 +2305,18 @@ abstract class WC_Abstract_Order extends WC_Abstract_Legacy_Order {
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * Get order title.
+	 *
+	 * @return string Order title.
+	 */
+	public function get_title() : string {
+		if ( method_exists( $this->data_store, 'get_title' ) ) {
+			return $this->data_store->get_title( $this );
+		} else {
+			return __( 'Order', 'woocommerce' );
+		}
 	}
 }

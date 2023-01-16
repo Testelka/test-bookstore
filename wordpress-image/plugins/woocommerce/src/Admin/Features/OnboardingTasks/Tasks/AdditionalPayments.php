@@ -13,6 +13,13 @@ use Automattic\WooCommerce\Admin\Features\OnboardingTasks\Tasks\WooCommercePayme
 class AdditionalPayments extends Payments {
 
 	/**
+	 * Used to cache is_complete() method result.
+	 * @var null
+	 */
+	private $is_complete_result = null;
+
+
+	/**
 	 * ID.
 	 *
 	 * @return string
@@ -27,7 +34,10 @@ class AdditionalPayments extends Payments {
 	 * @return string
 	 */
 	public function get_title() {
-		return __( 'Set up additional payment providers', 'woocommerce' );
+		return __(
+			'Set up additional payment options',
+			'woocommerce'
+		);
 	}
 
 	/**
@@ -57,7 +67,11 @@ class AdditionalPayments extends Payments {
 	 * @return bool
 	 */
 	public function is_complete() {
-		return self::has_gateways();
+		if ( $this->is_complete_result === null ) {
+			$this->is_complete_result = self::has_gateways();
+		}
+
+		return $this->is_complete_result;
 	}
 
 	/**

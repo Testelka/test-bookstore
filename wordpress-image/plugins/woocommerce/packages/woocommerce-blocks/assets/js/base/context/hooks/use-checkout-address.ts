@@ -4,24 +4,25 @@
 import {
 	defaultAddressFields,
 	AddressFields,
-	EnteredAddress,
 	ShippingAddress,
 	BillingAddress,
+	getSetting,
 } from '@woocommerce/settings';
 import { useCallback } from '@wordpress/element';
+import { useDispatch, useSelect } from '@wordpress/data';
+import { CHECKOUT_STORE_KEY } from '@woocommerce/block-data';
 
 /**
  * Internal dependencies
  */
-import { useCheckoutContext } from '../providers/cart-checkout';
 import { useCustomerData } from './use-customer-data';
 import { useShippingData } from './shipping/use-shipping-data';
 
 interface CheckoutAddress {
 	shippingAddress: ShippingAddress;
-	billingData: BillingAddress;
-	setShippingAddress: ( data: Partial< EnteredAddress > ) => void;
-	setBillingData: ( data: Partial< EnteredAddress > ) => void;
+	billingAddress: BillingAddress;
+	setShippingAddress: ( data: Partial< ShippingAddress > ) => void;
+	setBillingAddress: ( data: Partial< BillingAddress > ) => void;
 	setEmail: ( value: string ) => void;
 	setBillingPhone: ( value: string ) => void;
 	setShippingPhone: ( value: string ) => void;
@@ -30,6 +31,7 @@ interface CheckoutAddress {
 	defaultAddressFields: AddressFields;
 	showShippingFields: boolean;
 	showBillingFields: boolean;
+	forcedBillingAddress: boolean;
 }
 
 /**
@@ -37,31 +39,32 @@ interface CheckoutAddress {
  */
 export const useCheckoutAddress = (): CheckoutAddress => {
 	const { needsShipping } = useShippingData();
+	const useShippingAsBilling = useSelect( ( select ) =>
+		select( CHECKOUT_STORE_KEY ).getUseShippingAsBilling()
+	);
+	const { __internalSetUseShippingAsBilling } =
+		useDispatch( CHECKOUT_STORE_KEY );
 	const {
-		useShippingAsBilling,
-		setUseShippingAsBilling,
-	} = useCheckoutContext();
-	const {
-		billingData,
-		setBillingData,
+		billingAddress,
+		setBillingAddress,
 		shippingAddress,
 		setShippingAddress,
 	} = useCustomerData();
 
 	const setEmail = useCallback(
 		( value ) =>
-			void setBillingData( {
+			void setBillingAddress( {
 				email: value,
 			} ),
-		[ setBillingData ]
+		[ setBillingAddress ]
 	);
 
 	const setBillingPhone = useCallback(
 		( value ) =>
-			void setBillingData( {
+			void setBillingAddress( {
 				phone: value,
 			} ),
-		[ setBillingData ]
+		[ setBillingAddress ]
 	);
 
 	const setShippingPhone = useCallback(
@@ -71,19 +74,23 @@ export const useCheckoutAddress = (): CheckoutAddress => {
 			} ),
 		[ setShippingAddress ]
 	);
-
+	const forcedBillingAddress: boolean = getSetting(
+		'forcedBillingAddress',
+		false
+	);
 	return {
 		shippingAddress,
-		billingData,
+		billingAddress,
 		setShippingAddress,
-		setBillingData,
+		setBillingAddress,
 		setEmail,
 		setBillingPhone,
 		setShippingPhone,
 		defaultAddressFields,
 		useShippingAsBilling,
-		setUseShippingAsBilling,
-		showShippingFields: needsShipping,
+		setUseShippingAsBilling: __internalSetUseShippingAsBilling,
+		showShippingFields: ! forcedBillingAddress && needsShipping,
 		showBillingFields: ! needsShipping || ! useShippingAsBilling,
+		forcedBillingAddress,
 	};
 };

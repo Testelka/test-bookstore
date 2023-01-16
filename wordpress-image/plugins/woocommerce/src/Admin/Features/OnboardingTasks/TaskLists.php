@@ -8,8 +8,8 @@ namespace Automattic\WooCommerce\Admin\Features\OnboardingTasks;
 use Automattic\WooCommerce\Admin\Features\Features;
 use Automattic\WooCommerce\Admin\Features\OnboardingTasks\DeprecatedExtendedTask;
 use Automattic\WooCommerce\Admin\Features\OnboardingTasks\Task;
-use Automattic\WooCommerce\Internal\Admin\Loader;
-
+use Automattic\WooCommerce\Admin\Features\OnboardingTasks\Tasks\ReviewShippingOptions;
+use Automattic\WooCommerce\Admin\Features\OnboardingTasks\Tasks\TourInAppMarketplace;
 /**
  * Task Lists class.
  */
@@ -51,6 +51,9 @@ class TaskLists {
 		'Marketing',
 		'Appearance',
 		'AdditionalPayments',
+		'ReviewShippingOptions',
+		'GetMobileApp',
+		'TourInAppMarketplace',
 	);
 
 	/**
@@ -70,6 +73,7 @@ class TaskLists {
 		self::init_default_lists();
 		add_action( 'admin_init', array( __CLASS__, 'set_active_task' ), 5 );
 		add_action( 'init', array( __CLASS__, 'init_tasks' ) );
+		add_action( 'admin_menu', array( __CLASS__, 'menu_task_count' ) );
 		add_filter( 'woocommerce_admin_shared_settings', array( __CLASS__, 'task_list_preloaded_settings' ), 20 );
 	}
 
@@ -106,32 +110,11 @@ class TaskLists {
 	public static function init_default_lists() {
 		self::add_list(
 			array(
-				'id'           => 'setup',
-				'title'        => __( 'Get ready to start selling', 'woocommerce' ),
-				'tasks'        => array(
-					'StoreDetails',
-					'Purchase',
-					'Products',
-					'WooCommercePayments',
-					'Payments',
-					'Tax',
-					'Shipping',
-					'Marketing',
-					'Appearance',
-				),
-				'event_prefix' => 'tasklist_',
-				'visible'      => ! self::is_experiment_treatment( 'woocommerce_tasklist_setup_experiment_1' )
-					&& ! self::is_experiment_treatment( 'woocommerce_tasklist_setup_experiment_2' ),
-			)
-		);
-
-		self::add_list(
-			array(
-				'id'                      => 'setup_experiment_1',
-				'hidden_id'               => 'setup',
+				'id'                      => 'setup',
 				'title'                   => __( 'Get ready to start selling', 'woocommerce' ),
 				'tasks'                   => array(
 					'StoreDetails',
+					'Purchase',
 					'Products',
 					'WooCommercePayments',
 					'Payments',
@@ -145,65 +128,7 @@ class TaskLists {
 				'options'                 => array(
 					'use_completed_title' => true,
 				),
-				'visible'                 => self::is_experiment_treatment( 'woocommerce_tasklist_setup_experiment_1' ),
-			)
-		);
-
-		self::add_list(
-			array(
-				'id'           => 'setup_experiment_2',
-				'hidden_id'    => 'setup',
-				'title'        => __( 'Get ready to start selling', 'woocommerce' ),
-				'tasks'        => array(
-					'StoreCreation',
-					'StoreDetails',
-					'Products',
-					'WooCommercePayments',
-					'Payments',
-					'Tax',
-					'Shipping',
-					'Marketing',
-					'Appearance',
-				),
-				'event_prefix' => 'tasklist_',
-				'visible'      => self::is_experiment_treatment( 'woocommerce_tasklist_setup_experiment_2' )
-					&& ! self::is_experiment_treatment( 'woocommerce_tasklist_setup_experiment_1' ),
-				'options'      => array(
-					'use_completed_title' => true,
-				),
-				'display_progress_header' => true,
-				'sections'     => array(
-					array(
-						'id'          => 'basics',
-						'title'       => __( 'Cover the basics', 'woocommerce' ),
-						'description' => __( 'Make sure you’ve got everything you need to start selling—from business details to products.', 'woocommerce' ),
-						'image'       => plugins_url(
-							'/assets/images/task_list/basics-section-illustration.png',
-							WC_ADMIN_PLUGIN_FILE
-						),
-						'task_names'  => array( 'StoreCreation', 'StoreDetails', 'Products', 'Payments', 'WooCommercePayments' ),
-					),
-					array(
-						'id'          => 'sales',
-						'title'       => __( 'Get ready to sell', 'woocommerce' ),
-						'description' => __( 'Easily set up the backbone of your store’s operations and get ready to accept first orders.', 'woocommerce' ),
-						'image'       => plugins_url(
-							'/assets/images/task_list/sales-section-illustration.png',
-							WC_ADMIN_PLUGIN_FILE
-						),
-						'task_names'  => array( 'Shipping', 'Tax' ),
-					),
-					array(
-						'id'          => 'expand',
-						'title'       => __( 'Customize & expand', 'woocommerce' ),
-						'description' => __( 'Personalize your store’s design and grow your business by enabling new sales channels.', 'woocommerce' ),
-						'image'       => plugins_url(
-							'/assets/images/task_list/expand-section-illustration.png',
-							WC_ADMIN_PLUGIN_FILE
-						),
-						'task_names'  => array( 'Appearance', 'Marketing' ),
-					),
-				),
+				'visible'                 => true,
 			)
 		);
 
@@ -223,6 +148,7 @@ class TaskLists {
 				),
 				'tasks'   => array(
 					'AdditionalPayments',
+					'GetMobileApp',
 				),
 			)
 		);
@@ -260,11 +186,47 @@ class TaskLists {
 				),
 				'tasks'        => array(
 					'AdditionalPayments',
+					'GetMobileApp',
 				),
 				'event_prefix' => 'extended_tasklist_',
 			)
 		);
 
+		if ( Features::is_enabled( 'shipping-smart-defaults' ) ) {
+			self::add_task(
+				'extended',
+				new ReviewShippingOptions(
+					self::get_list( 'extended' )
+				)
+			);
+
+			self::add_task(
+				'extended_two_column',
+				new ReviewShippingOptions(
+					self::get_list( 'extended_two_column' )
+				)
+			);
+
+			// Tasklist that will never be shown in homescreen,
+			// used for having tasks that are accessed by other means.
+			self::add_list(
+				array(
+					'id'           => 'secret_tasklist',
+					'hidden_id'    => 'setup',
+					'tasks'        => array(
+						'ExperimentalShippingRecommendation',
+					),
+					'event_prefix' => 'secret_tasklist_',
+					'visible'      => false,
+				)
+			);
+		}
+
+		if ( ! wp_is_mobile() ) { // Permit In-App Marketplace Tour on desktops only.
+			$tour_task = new TourInAppMarketplace();
+			self::add_task( 'extended', $tour_task );
+			self::add_task( 'extended_two_column', $tour_task );
+		}
 	}
 
 	/**
@@ -308,7 +270,7 @@ class TaskLists {
 	 * Add a task list.
 	 *
 	 * @param array $args Task list properties.
-	 * @return WP_Error|TaskList
+	 * @return \WP_Error|TaskList
 	 */
 	public static function add_list( $args ) {
 		if ( isset( self::$lists[ $args['id'] ] ) ) {
@@ -327,7 +289,7 @@ class TaskLists {
 	 *
 	 * @param string $list_id List ID to add the task to.
 	 * @param array  $args Task properties.
-	 * @return WP_Error|Task
+	 * @return \WP_Error|Task
 	 */
 	public static function add_task( $list_id, $args ) {
 		if ( ! isset( self::$lists[ $list_id ] ) ) {
@@ -459,6 +421,51 @@ class TaskLists {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Return number of setup tasks remaining
+	 *
+	 * @return number
+	 */
+	public static function setup_tasks_remaining() {
+		$setup_list = self::get_list( 'setup' );
+
+		if ( ! $setup_list || $setup_list->is_hidden() || $setup_list->is_complete() ) {
+			return;
+		}
+
+		$remaining_tasks = array_values(
+			array_filter(
+				$setup_list->get_viewable_tasks(),
+				function( $task ) {
+					return ! $task->is_complete();
+				}
+			)
+		);
+
+		return count( $remaining_tasks );
+	}
+
+	/**
+	 * Add badge to homescreen menu item for remaining tasks
+	 */
+	public static function menu_task_count() {
+		global $submenu;
+
+		$tasks_count = self::setup_tasks_remaining();
+
+		if ( ! $tasks_count || ! isset( $submenu['woocommerce'] ) ) {
+			return;
+		}
+
+		foreach ( $submenu['woocommerce'] as $key => $menu_item ) {
+			if ( 0 === strpos( $menu_item[0], _x( 'Home', 'Admin menu name', 'woocommerce' ) ) ) {
+				$submenu['woocommerce'][ $key ][0] .= ' <span class="awaiting-mod update-plugins remaining-tasks-badge count-' . esc_attr( $tasks_count ) . '">' . number_format_i18n( $tasks_count ) . '</span>'; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+				break;
+			}
+		}
+
 	}
 
 	/**

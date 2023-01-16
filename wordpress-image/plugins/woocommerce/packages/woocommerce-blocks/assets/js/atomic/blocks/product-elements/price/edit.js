@@ -1,13 +1,13 @@
 /**
  * External dependencies
  */
-import { isFeaturePluginBuild } from '@woocommerce/block-settings';
 import {
 	AlignmentToolbar,
 	BlockControls,
 	useBlockProps,
 } from '@wordpress/block-editor';
 import { __ } from '@wordpress/i18n';
+import { useEffect } from 'react';
 
 /**
  * Internal dependencies
@@ -16,12 +16,23 @@ import Block from './block';
 import withProductSelector from '../shared/with-product-selector';
 import { BLOCK_TITLE, BLOCK_ICON } from './constants';
 
-const PriceEdit = ( { attributes, setAttributes } ) => {
+const PriceEdit = ( { attributes, setAttributes, context } ) => {
 	const blockProps = useBlockProps();
+	const blockAttrs = {
+		...attributes,
+		...context,
+	};
+	const isDescendentOfQueryLoop = Number.isFinite( context.queryId );
+
+	useEffect(
+		() => setAttributes( { isDescendentOfQueryLoop } ),
+		[ setAttributes, isDescendentOfQueryLoop ]
+	);
+
 	return (
 		<>
 			<BlockControls>
-				{ isFeaturePluginBuild() && (
+				{ isDescendentOfQueryLoop && (
 					<AlignmentToolbar
 						value={ attributes.textAlign }
 						onChange={ ( newAlign ) => {
@@ -31,7 +42,7 @@ const PriceEdit = ( { attributes, setAttributes } ) => {
 				) }
 			</BlockControls>
 			<div { ...blockProps }>
-				<Block { ...attributes } />
+				<Block { ...blockAttrs } />
 			</div>
 		</>
 	);

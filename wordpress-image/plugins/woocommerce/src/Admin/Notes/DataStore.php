@@ -344,9 +344,13 @@ class DataStore extends \WC_Data_Store_WP implements \WC_Object_Data_Store_Inter
 		$offset        = $args['per_page'] * ( $args['page'] - 1 );
 		$where_clauses = $this->get_notes_where_clauses( $args, $context );
 
+		// sanitize order and orderby.
+		$order_by  = '`' . str_replace( '`', '', $args['orderby'] ) . '`';
+		$order_dir = 'asc' === strtolower( $args['order'] ) ? 'ASC' : 'DESC';
+
 		$query = $wpdb->prepare(
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			"SELECT * FROM {$wpdb->prefix}wc_admin_notes WHERE 1=1{$where_clauses} ORDER BY {$args['orderby']} {$args['order']} LIMIT %d, %d",
+			"SELECT * FROM {$wpdb->prefix}wc_admin_notes WHERE 1=1{$where_clauses} ORDER BY {$order_by} {$order_dir} LIMIT %d, %d",
 			$offset,
 			$args['per_page']
 		);
@@ -372,7 +376,11 @@ class DataStore extends \WC_Data_Store_WP implements \WC_Object_Data_Store_Inter
 
 		$where_clauses = $this->args_to_where_clauses( $args );
 
-		$query = "SELECT * FROM {$wpdb->prefix}wc_admin_notes WHERE 1=1{$where_clauses} ORDER BY {$args['orderby']} {$args['order']}";
+		// sanitize order and orderby.
+		$order_by  = '`' . str_replace( '`', '', $args['orderby'] ) . '`';
+		$order_dir = 'asc' === strtolower( $args['order'] ) ? 'ASC' : 'DESC';
+
+		$query = "SELECT * FROM {$wpdb->prefix}wc_admin_notes WHERE 1=1{$where_clauses} ORDER BY {$order_by} {$order_dir}";
 
 		return $wpdb->get_results( $query ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 	}
@@ -498,6 +506,10 @@ class DataStore extends \WC_Data_Store_WP implements \WC_Object_Data_Store_Inter
 
 		if ( ! empty( $escaped_where_source ) ) {
 			$where_clauses .= " AND source IN ($escaped_where_source)";
+		}
+
+		if ( isset( $args['is_read'] ) ) {
+			$where_clauses .= $args['is_read'] ? ' AND is_read = 1' : ' AND is_read = 0';
 		}
 
 		$where_clauses .= $escaped_is_deleted ? ' AND is_deleted = 1' : ' AND is_deleted = 0';

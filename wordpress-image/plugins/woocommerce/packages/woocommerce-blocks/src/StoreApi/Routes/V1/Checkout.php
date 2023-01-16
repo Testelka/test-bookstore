@@ -411,6 +411,14 @@ class Checkout extends AbstractCartRoute {
 			}
 		}
 
+		/**
+		 * Fires when the Checkout Block/Store API updates a customer from the API request data.
+		 *
+		 * @param \WC_Customer $customer Customer object.
+		 * @param \WP_REST_Request $request Full details about the request.
+		 */
+		do_action( 'woocommerce_store_api_checkout_update_customer_from_request', $customer, $request );
+
 		$customer->save();
 	}
 
@@ -438,6 +446,7 @@ class Checkout extends AbstractCartRoute {
 			'woocommerce_blocks_checkout_update_order_from_request',
 			array(
 				$this->order,
+				$request,
 			),
 			'7.2.0',
 			'woocommerce_store_api_checkout_update_order_from_request',
@@ -509,7 +518,7 @@ class Checkout extends AbstractCartRoute {
 				throw new RouteException( 'woocommerce_rest_checkout_invalid_payment_result', __( 'Invalid payment result received from payment method.', 'woocommerce' ), 500 );
 			}
 		} catch ( \Exception $e ) {
-			throw new RouteException( 'woocommerce_rest_checkout_process_payment_error', $e->getMessage(), 400 );
+			throw new RouteException( 'woocommerce_rest_checkout_process_payment_error', $e->getMessage(), 402 );
 		}
 	}
 

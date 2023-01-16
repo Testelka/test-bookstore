@@ -72,10 +72,37 @@ if ( ! class_exists( 'YITH_WCWL_Wishlist' ) ) {
 		public function __construct( $wishlist = 0 ) {
 			// set default values.
 			$this->data = array(
+				/**
+				 * APPLY_FILTERS: yith_wcwl_default_wishlist_privacy
+				 *
+				 * Filter the default Wishlist privacy.
+				 *
+				 * @param string $wishlist_privacy Default wishlist privacy. Possible values are 0 (Public), 1 (Shared) or 2 (Private)
+				 *
+				 * @return string
+				 */
 				'privacy'    => apply_filters( 'yith_wcwl_default_wishlist_privacy', 0 ),
 				'user_id'    => 0,
 				'session_id' => '',
+				/**
+				 * APPLY_FILTERS: yith_wcwl_default_wishlist_name
+				 *
+				 * Filter the default Wishlist name.
+				 *
+				 * @param string $wishlist_name Default wishlist name
+				 *
+				 * @return string
+				 */
 				'name'       => apply_filters( 'yith_wcwl_default_wishlist_name', '' ),
+				/**
+				 * APPLY_FILTERS: yith_wcwl_default_wishlist_slug
+				 *
+				 * Filter the default Wishlist slug.
+				 *
+				 * @param string $wishlist_slug Default wishlist slug
+				 *
+				 * @return string
+				 */
 				'slug'       => apply_filters( 'yith_wcwl_default_wishlist_slug', '' ),
 				'token'      => '',
 				'is_default' => 0,
@@ -149,20 +176,30 @@ if ( ! class_exists( 'YITH_WCWL_Wishlist' ) ) {
 		public function is_current_user_owner( $current_user = false ) {
 			$user_id    = $this->get_user_id();
 			$session_id = $this->get_session_id();
+			$is_owner   = false;
 
 			if ( $current_user && ( (int) $current_user === $user_id || $current_user === $session_id ) ) {
-				return true;
+				$is_owner = true;
 			}
 
 			if ( $this->has_owner() && is_user_logged_in() && get_current_user_id() === $user_id ) {
-				return true;
+				$is_owner = true;
 			}
 
 			if ( $this->is_session_based() && YITH_WCWL_Session()->maybe_get_session_id() === $session_id ) {
-				return true;
+				$is_owner = true;
 			}
 
-			return false;
+			/**
+			 * APPLY_FILTERS: yith_wcwl_is_current_user_owner
+			 *
+			 * Filters whether the current user is the wishlist owner.
+			 *
+			 * @param bool $is_owner Whether the current user is the wishlist owner
+			 *
+			 * @return bool
+			 */
+			return apply_filters( 'yith_wcwl_is_current_user_owner', $is_owner );
 		}
 
 		/**
@@ -185,6 +222,18 @@ if ( ! class_exists( 'YITH_WCWL_Wishlist' ) ) {
 		 */
 		public function current_user_can( $capability = 'view', $current_user = false ) {
 			// admin can do anything by default.
+			/**
+			 * APPLY_FILTERS: yith_wcwl_admin_can
+			 *
+			 * Filter whether admin can perform a specific action on wishlist.
+			 *
+			 * @param bool               $user_can     Whether admin can perform some actions on the wishlist
+			 * @param string             $capability   Capability
+			 * @param WP_User            $current_user Current user
+			 * @param YITH_WCWL_Wishlist $wishlist     Wishlist object
+			 *
+			 * @return bool
+			 */
 			if ( is_user_logged_in() && current_user_can( 'manage_woocommerce' ) && apply_filters( 'yith_wcwl_admin_can', true, $capability, $current_user, $this ) ) {
 				return true;
 			}
@@ -203,6 +252,18 @@ if ( ! class_exists( 'YITH_WCWL_Wishlist' ) ) {
 					break;
 			}
 
+			/**
+			 * APPLY_FILTERS: yith_wcwl_current_user_can
+			 *
+			 * Filter whether current user can perform a specific action on wishlist.
+			 *
+			 * @param bool               $user_can     Whether current user can perform some actions on the wishlist
+			 * @param string             $capability   Capability
+			 * @param WP_User            $current_user Current user
+			 * @param YITH_WCWL_Wishlist $wishlist     Wishlist object
+			 *
+			 * @return bool
+			 */
 			return apply_filters( 'yith_wcwl_current_user_can', $can, $capability, $current_user, $this );
 		}
 
@@ -237,6 +298,18 @@ if ( ! class_exists( 'YITH_WCWL_Wishlist' ) ) {
 			$privacy           = $this->get_privacy( $context );
 			$formatted_privacy = yith_wcwl_get_privacy_label( $privacy );
 
+			/**
+			 * APPLY_FILTERS: yith_wcwl_wishlist_formatted_privacy
+			 *
+			 * Filter the formatted wishlist privacy label.
+			 *
+			 * @param string             $formatted_privacy Formatted privacy label
+			 * @param int                $privacy           Privacy option
+			 * @param YITH_WCWL_Wishlist $wishlist          Wishlist object
+			 * @param string             $context           Context
+			 *
+			 * @return string
+			 */
 			return apply_filters( 'yith_wcwl_wishlist_formatted_privacy', $formatted_privacy, $privacy, $this, $context );
 		}
 
@@ -307,9 +380,27 @@ if ( ! class_exists( 'YITH_WCWL_Wishlist' ) ) {
 			$name = $this->get_name( $context );
 
 			if ( $this->is_default() && ! $name ) {
+				/**
+				 * APPLY_FILTERS: yith_wcwl_default_wishlist_formatted_title
+				 *
+				 * Filter the default wishlist title.
+				 *
+				 * @param string $title Default wishlist title
+				 *
+				 * @return string
+				 */
 				$name = apply_filters( 'yith_wcwl_default_wishlist_formatted_title', get_option( 'yith_wcwl_wishlist_title' ) );
 			}
 
+			/**
+			 * APPLY_FILTERS: yith_wcwl_wishlist_formatted_title
+			 *
+			 * Filter the formatted wishlist title.
+			 *
+			 * @param string $title Formatted wishlist title
+			 *
+			 * @return string
+			 */
 			return apply_filters( 'yith_wcwl_wishlist_formatted_title', $name );
 		}
 
@@ -488,6 +579,16 @@ if ( ! class_exists( 'YITH_WCWL_Wishlist' ) ) {
 		 * @return string Url to download
 		 */
 		public function get_download_url() {
+			/**
+			 * APPLY_FILTERS: yith_wcwl_wishlist_download_url
+			 *
+			 * Filter the URL to download the wishlist PDF.
+			 *
+			 * @param string             $download_url PDF download URL
+			 * @param YITH_WCWL_Wishlist $wishlist     Wishlist object
+			 *
+			 * @return string
+			 */
 			return apply_filters( 'yith_wcwl_wishlist_download_url', wp_nonce_url( add_query_arg( 'download_wishlist', $this->get_id() ), 'download_wishlist', 'download_nonce' ), $this );
 		}
 
@@ -497,6 +598,16 @@ if ( ! class_exists( 'YITH_WCWL_Wishlist' ) ) {
 		 * @return string Url to delete the wishlist
 		 */
 		public function get_delete_url() {
+			/**
+			 * APPLY_FILTERS: yith_wcwl_wishlist_delete_url
+			 *
+			 * Filter the URL to delete the wishlist.
+			 *
+			 * @param string             $delete_url Delete wishlist URL
+			 * @param YITH_WCWL_Wishlist $wishlist   Wishlist object
+			 *
+			 * @return string
+			 */
 			return apply_filters( 'yith_wcwl_wishlist_delete_url', wp_nonce_url( add_query_arg( 'wishlist_id', $this->get_id(), YITH_WCWL()->get_wishlist_url( 'manage' ) ), 'yith_wcwl_delete_action', 'yith_wcwl_delete' ), $this );
 		}
 
@@ -650,6 +761,16 @@ if ( ! class_exists( 'YITH_WCWL_Wishlist' ) ) {
 				$this->items = array_filter( $this->data_store->read_items( $this ) );
 			}
 
+			/**
+			 * APPLY_FILTERS: yith_wcwl_wishlist_get_items
+			 *
+			 * Filter the wishlist items.
+			 *
+			 * @param array              $wishlist_items Wishlist items
+			 * @param YITH_WCWL_Wishlist $wishlist       Wishlist object
+			 *
+			 * @return string
+			 */
 			$items = apply_filters( 'yith_wcwl_wishlist_get_items', $this->items, $this );
 
 			if ( $limit ) {
@@ -828,6 +949,7 @@ if ( ! class_exists( 'YITH_WCWL_Wishlist' ) ) {
 		 * @param string $offset Offset.
 		 * @param mixed  $value  Value.
 		 */
+		#[\ReturnTypeWillChange]
 		public function offsetSet( $offset, $value ) {
 			$offset = $this->map_legacy_offsets( $offset );
 
@@ -844,6 +966,7 @@ if ( ! class_exists( 'YITH_WCWL_Wishlist' ) ) {
 		 *
 		 * @param string $offset Offset.
 		 */
+		#[\ReturnTypeWillChange]
 		public function offsetUnset( $offset ) {
 			$offset = $this->map_legacy_offsets( $offset );
 
@@ -862,6 +985,7 @@ if ( ! class_exists( 'YITH_WCWL_Wishlist' ) ) {
 		 * @param string $offset Offset.
 		 * @return bool
 		 */
+		#[\ReturnTypeWillChange]
 		public function offsetExists( $offset ) {
 			$offset = $this->map_legacy_offsets( $offset );
 
@@ -879,6 +1003,7 @@ if ( ! class_exists( 'YITH_WCWL_Wishlist' ) ) {
 		 * @param string $offset Offset.
 		 * @return mixed
 		 */
+		#[\ReturnTypeWillChange]
 		public function offsetGet( $offset ) {
 			$offset = $this->map_legacy_offsets( $offset );
 
@@ -915,6 +1040,16 @@ if ( ! class_exists( 'YITH_WCWL_Wishlist' ) ) {
 				$offset = 'user_last_name';
 			}
 
+			/**
+			 * APPLY_FILTERS: yith_wcwl_wishlist_map_legacy_offsets
+			 *
+			 * Filter the wishlist legacy offsets to index to new properties.
+			 *
+			 * @param string $offset        Offset to search
+			 * @param string $legacy_offset Legacy offset
+			 *
+			 * @return string
+			 */
 			return apply_filters( 'yith_wcwl_wishlist_map_legacy_offsets', $offset, $legacy_offset );
 		}
 	}

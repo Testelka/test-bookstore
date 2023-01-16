@@ -33,9 +33,9 @@ import { ReturnOrGeneratorYieldUnion } from '../mapped-types';
 export const receiveCart = (
 	response: CartResponse
 ): { type: string; response: Cart } => {
-	const cart = ( mapKeys( response, ( _, key ) =>
+	const cart = mapKeys( response, ( _, key ) =>
 		camelCase( key )
-	) as unknown ) as Cart;
+	) as unknown as Cart;
 	return {
 		type: types.RECEIVE_CART,
 		response: cart,
@@ -55,9 +55,9 @@ export const receiveCart = (
 export const receiveCartContents = (
 	response: CartResponse
 ): { type: string; response: Partial< Cart > } => {
-	const cart = ( mapKeys( response, ( _, key ) =>
+	const cart = mapKeys( response, ( _, key ) =>
 		camelCase( key )
-	) as unknown ) as Cart;
+	) as unknown as Cart;
 	const { shippingAddress, billingAddress, ...cartWithoutAddress } = cart;
 	return {
 		type: types.RECEIVE_CART,
@@ -185,14 +185,6 @@ export const shippingRatesBeingSelected = ( isResolving: boolean ) =>
 	} as const );
 
 /**
- * Returns an action object for updating legacy cart fragments.
- */
-export const updateCartFragments = () =>
-	( {
-		type: types.UPDATE_LEGACY_CART_FRAGMENTS,
-	} as const );
-
-/**
  * Triggers an adding to cart event so other blocks can update accordingly.
  */
 export const triggerAddingToCartEvent = () =>
@@ -227,7 +219,6 @@ export function* applyExtensionCartUpdate(
 			cache: 'no-store',
 		} );
 		yield receiveCart( response );
-		yield updateCartFragments();
 		return response;
 	} catch ( error ) {
 		yield receiveError( error );
@@ -265,7 +256,6 @@ export function* applyCoupon(
 
 		yield receiveCart( response );
 		yield receiveApplyingCoupon( '' );
-		yield updateCartFragments();
 	} catch ( error ) {
 		yield receiveError( error );
 		yield receiveApplyingCoupon( '' );
@@ -306,7 +296,6 @@ export function* removeCoupon(
 
 		yield receiveCart( response );
 		yield receiveRemovingCoupon( '' );
-		yield updateCartFragments();
 	} catch ( error ) {
 		yield receiveError( error );
 		yield receiveRemovingCoupon( '' );
@@ -351,7 +340,6 @@ export function* addItemToCart(
 
 		yield receiveCart( response );
 		yield triggerAddedToCartEvent( { preserveCartData: true } );
-		yield updateCartFragments();
 	} catch ( error ) {
 		yield receiveError( error );
 
@@ -390,7 +378,6 @@ export function* removeItemFromCart(
 		} );
 
 		yield receiveCart( response );
-		yield updateCartFragments();
 	} catch ( error ) {
 		yield receiveError( error );
 
@@ -437,7 +424,6 @@ export function* changeCartItemQuantity(
 		} );
 
 		yield receiveCart( response );
-		yield updateCartFragments();
 	} catch ( error ) {
 		yield receiveError( error );
 
@@ -490,10 +476,11 @@ export function* selectShippingRate(
 }
 
 /**
- * Sets billing data locally, as opposed to updateCustomerData which sends it to the server.
+ * Sets billing address locally, as opposed to updateCustomerData which sends it to the server.
  */
-export const setBillingData = ( billingData: Partial< BillingAddress > ) =>
-	( { type: types.SET_BILLING_DATA, billingData } as const );
+export const setBillingAddress = (
+	billingAddress: Partial< BillingAddress >
+) => ( { type: types.SET_BILLING_ADDRESS, billingAddress } as const );
 
 /**
  * Sets shipping address locally, as opposed to updateCustomerData which sends it to the server.
@@ -543,7 +530,7 @@ export function* updateCustomerData(
 export type CartAction = ReturnOrGeneratorYieldUnion<
 	| typeof receiveCart
 	| typeof receiveCartContents
-	| typeof setBillingData
+	| typeof setBillingAddress
 	| typeof setShippingAddress
 	| typeof receiveError
 	| typeof receiveApplyingCoupon
@@ -558,5 +545,4 @@ export type CartAction = ReturnOrGeneratorYieldUnion<
 	| typeof removeItemFromCart
 	| typeof changeCartItemQuantity
 	| typeof addItemToCart
-	| typeof updateCartFragments
 >;

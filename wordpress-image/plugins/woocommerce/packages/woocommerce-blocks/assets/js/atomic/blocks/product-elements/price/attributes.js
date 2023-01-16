@@ -1,21 +1,19 @@
 /**
  * External dependencies
  */
-import { isFeaturePluginBuild } from '@woocommerce/block-settings';
 
-let blockAttributes = {
+export const blockAttributes = {
 	productId: {
 		type: 'number',
 		default: 0,
 	},
+	isDescendentOfQueryLoop: {
+		type: 'boolean',
+		default: false,
+	},
+	textAlign: {
+		type: 'string',
+	},
 };
 
-if ( isFeaturePluginBuild() ) {
-	blockAttributes = {
-		...blockAttributes,
-		textAlign: {
-			type: 'string',
-		},
-	};
-}
 export default blockAttributes;

@@ -13,7 +13,7 @@ import { BillingAddress, ShippingAddress } from '@woocommerce/settings';
 /**
  * Internal dependencies
  */
-import { CartState, defaultCartState } from '../default-states';
+import { CartState, defaultCartState } from './default-state';
 import type { ResponseError } from '../types';
 
 /**
@@ -30,11 +30,11 @@ export const getCustomerData = (
 	state: CartState
 ): {
 	shippingAddress: ShippingAddress;
-	billingData: BillingAddress;
+	billingAddress: BillingAddress;
 } => {
 	return {
 		shippingAddress: state.cartData.shippingAddress,
-		billingData: state.cartData.billingAddress,
+		billingAddress: state.cartData.billingAddress,
 	};
 };
 

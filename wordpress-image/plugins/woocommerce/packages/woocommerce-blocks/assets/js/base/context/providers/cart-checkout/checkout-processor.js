@@ -14,29 +14,36 @@ import {
 	emptyHiddenAddressFields,
 	formatStoreApiErrorMessage,
 } from '@woocommerce/base-utils';
-import { useDispatch } from '@wordpress/data';
+import { useDispatch, useSelect } from '@wordpress/data';
+import {
+	CHECKOUT_STORE_KEY,
+	PAYMENT_STORE_KEY,
+	VALIDATION_STORE_KEY,
+	CART_STORE_KEY,
+} from '@woocommerce/block-data';
+import {
+	getPaymentMethods,
+	getExpressPaymentMethods,
+} from '@woocommerce/blocks-registry';
 
 /**
  * Internal dependencies
  */
 import { preparePaymentData, processCheckoutResponseHeaders } from './utils';
-import { useCheckoutContext } from './checkout-state';
+import { useCheckoutEventsContext } from './checkout-events';
 import { useShippingDataContext } from './shipping';
-import { useCustomerDataContext } from './customer';
-import { usePaymentMethodDataContext } from './payment-methods';
-import { useValidationContext } from '../validation';
 import { useStoreCart } from '../../hooks/cart/use-store-cart';
-import { useStoreNoticesContext } from '../store-notices';
+
 /**
  * CheckoutProcessor component.
  *
  * Subscribes to checkout context and triggers processing via the API.
  */
 const CheckoutProcessor = () => {
+	const { onCheckoutValidationBeforeProcessing } = useCheckoutEventsContext();
+
 	const {
 		hasError: checkoutHasError,
-		onCheckoutValidationBeforeProcessing,
-		dispatchActions,
 		redirectUrl,
 		isProcessing: checkoutIsProcessing,
 		isBeforeProcessing: checkoutIsBeforeProcessing,
@@ -44,47 +51,80 @@ const CheckoutProcessor = () => {
 		orderNotes,
 		shouldCreateAccount,
 		extensionData,
-	} = useCheckoutContext();
-	const { hasValidationErrors } = useValidationContext();
+	} = useSelect( ( select ) => {
+		const store = select( CHECKOUT_STORE_KEY );
+		return {
+			hasError: store.hasError(),
+			redirectUrl: store.getRedirectUrl(),
+			isProcessing: store.isProcessing(),
+			isBeforeProcessing: store.isBeforeProcessing(),
+			isComplete: store.isComplete(),
+			orderNotes: store.getOrderNotes(),
+			shouldCreateAccount: store.getShouldCreateAccount(),
+			extensionData: store.getExtensionData(),
+		};
+	} );
+
+	const { __internalSetHasError, __internalProcessCheckoutResponse } =
+		useDispatch( CHECKOUT_STORE_KEY );
+
+	const hasValidationErrors = useSelect(
+		( select ) => select( VALIDATION_STORE_KEY ).hasValidationErrors
+	);
 	const { shippingErrorStatus } = useShippingDataContext();
-	const { billingData, shippingAddress } = useCustomerDataContext();
+
+	const { billingAddress, shippingAddress } = useSelect( ( select ) =>
+		select( CART_STORE_KEY ).getCustomerData()
+	);
+
 	const { cartNeedsPayment, cartNeedsShipping, receiveCart } = useStoreCart();
+	const { createErrorNotice, removeNotice } = useDispatch( 'core/notices' );
+
 	const {
 		activePaymentMethod,
-		isExpressPaymentMethodActive,
-		currentStatus: currentPaymentStatus,
 		paymentMethodData,
-		expressPaymentMethods,
-		paymentMethods,
+		isExpressPaymentMethodActive,
+		hasPaymentError,
+		isPaymentSuccess,
 		shouldSavePayment,
-	} = usePaymentMethodDataContext();
-	const { setIsSuppressed } = useStoreNoticesContext();
-	const { createErrorNotice, removeNotice } = useDispatch( 'core/notices' );
-	const currentBillingData = useRef( billingData );
+	} = useSelect( ( select ) => {
+		const store = select( PAYMENT_STORE_KEY );
+
+		return {
+			activePaymentMethod: store.getActivePaymentMethod(),
+			paymentMethodData: store.getPaymentMethodData(),
+			isExpressPaymentMethodActive: store.isExpressPaymentMethodActive(),
+			hasPaymentError: store.hasPaymentError(),
+			isPaymentSuccess: store.isPaymentSuccess(),
+			shouldSavePayment: store.getShouldSavePaymentMethod(),
+		};
+	}, [] );
+
+	const paymentMethods = getPaymentMethods();
+	const expressPaymentMethods = getExpressPaymentMethods();
+	const currentBillingAddress = useRef( billingAddress );
 	const currentShippingAddress = useRef( shippingAddress );
 	const currentRedirectUrl = useRef( redirectUrl );
 	const [ isProcessingOrder, setIsProcessingOrder ] = useState( false );
 
 	const paymentMethodId = useMemo( () => {
-		const merged = { ...expressPaymentMethods, ...paymentMethods };
+		const merged = {
+			...expressPaymentMethods,
+			...paymentMethods,
+		};
 		return merged?.[ activePaymentMethod ]?.paymentMethodId;
 	}, [ activePaymentMethod, expressPaymentMethods, paymentMethods ] );
 
 	const checkoutWillHaveError =
-		( hasValidationErrors && ! isExpressPaymentMethodActive ) ||
-		currentPaymentStatus.hasError ||
+		( hasValidationErrors() && ! isExpressPaymentMethodActive ) ||
+		hasPaymentError ||
 		shippingErrorStatus.hasError;
 
 	const paidAndWithoutErrors =
 		! checkoutHasError &&
 		! checkoutWillHaveError &&
-		( currentPaymentStatus.isSuccessful || ! cartNeedsPayment ) &&
+		( isPaymentSuccess || ! cartNeedsPayment ) &&
 		checkoutIsProcessing;
-
-	// If express payment method is active, let's suppress notices
-	useEffect( () => {
-		setIsSuppressed( isExpressPaymentMethodActive );
-	}, [ isExpressPaymentMethodActive, setIsSuppressed ] );
 
 	// Determine if checkout has an error.
 	useEffect( () => {
@@ -93,7 +133,7 @@ const CheckoutProcessor = () => {
 			( checkoutIsProcessing || checkoutIsBeforeProcessing ) &&
 			! isExpressPaymentMethodActive
 		) {
-			dispatchActions.setHasError( checkoutWillHaveError );
+			__internalSetHasError( checkoutWillHaveError );
 		}
 	}, [
 		checkoutWillHaveError,
@@ -101,20 +141,21 @@ const CheckoutProcessor = () => {
 		checkoutIsProcessing,
 		checkoutIsBeforeProcessing,
 		isExpressPaymentMethodActive,
-		dispatchActions,
+		__internalSetHasError,
 	] );
 
+	// Keep the billing, shipping and redirectUrl current
 	useEffect( () => {
-		currentBillingData.current = billingData;
+		currentBillingAddress.current = billingAddress;
 		currentShippingAddress.current = shippingAddress;
 		currentRedirectUrl.current = redirectUrl;
-	}, [ billingData, shippingAddress, redirectUrl ] );
+	}, [ billingAddress, shippingAddress, redirectUrl ] );
 
 	const checkValidation = useCallback( () => {
-		if ( hasValidationErrors ) {
+		if ( hasValidationErrors() ) {
 			return false;
 		}
-		if ( currentPaymentStatus.hasError ) {
+		if ( hasPaymentError ) {
 			return {
 				errorMessage: __(
 					'There was a problem with your payment option.',
@@ -132,12 +173,9 @@ const CheckoutProcessor = () => {
 		}
 
 		return true;
-	}, [
-		hasValidationErrors,
-		currentPaymentStatus.hasError,
-		shippingErrorStatus.hasError,
-	] );
+	}, [ hasValidationErrors, hasPaymentError, shippingErrorStatus.hasError ] );
 
+	// Validate the checkout using the CHECKOUT_VALIDATION_BEFORE_PROCESSING event
 	useEffect( () => {
 		let unsubscribeProcessing;
 		if ( ! isExpressPaymentMethodActive ) {
@@ -157,13 +195,14 @@ const CheckoutProcessor = () => {
 		isExpressPaymentMethodActive,
 	] );
 
-	// redirect when checkout is complete and there is a redirect url.
+	// Redirect when checkout is complete and there is a redirect url.
 	useEffect( () => {
 		if ( currentRedirectUrl.current ) {
 			window.location.href = currentRedirectUrl.current;
 		}
 	}, [ checkoutIsComplete ] );
 
+	// POST to the Store API and process and display any errors, or set order complete
 	const processOrder = useCallback( async () => {
 		if ( isProcessingOrder ) {
 			return;
@@ -184,7 +223,7 @@ const CheckoutProcessor = () => {
 
 		const data = {
 			billing_address: emptyHiddenAddressFields(
-				currentBillingData.current
+				currentBillingAddress.current
 			),
 			customer_note: orderNotes,
 			create_account: shouldCreateAccount,
@@ -206,26 +245,20 @@ const CheckoutProcessor = () => {
 			parse: false,
 		} )
 			.then( ( response ) => {
-				processCheckoutResponseHeaders(
-					response.headers,
-					dispatchActions
-				);
+				processCheckoutResponseHeaders( response.headers );
 				if ( ! response.ok ) {
 					throw new Error( response );
 				}
 				return response.json();
 			} )
 			.then( ( responseJson ) => {
-				dispatchActions.setAfterProcessing( responseJson );
+				__internalProcessCheckoutResponse( responseJson );
 				setIsProcessingOrder( false );
 			} )
 			.catch( ( errorResponse ) => {
 				try {
 					if ( errorResponse?.headers ) {
-						processCheckoutResponseHeaders(
-							errorResponse.headers,
-							dispatchActions
-						);
+						processCheckoutResponseHeaders( errorResponse.headers );
 					}
 					// This attempts to parse a JSON error response where the status code was 4xx/5xx.
 					errorResponse.json().then( ( response ) => {
@@ -235,17 +268,22 @@ const CheckoutProcessor = () => {
 						}
 						createErrorNotice(
 							formatStoreApiErrorMessage( response ),
-							{ id: 'checkout', context: 'wc/checkout' }
+							{
+								id: 'checkout',
+								context: 'wc/checkout',
+								__unstableHTML: true,
+							}
 						);
 						response?.additional_errors?.forEach?.(
 							( additionalError ) => {
 								createErrorNotice( additionalError.message, {
 									id: additionalError.error_code,
 									context: 'wc/checkout',
+									__unstableHTML: true,
 								} );
 							}
 						);
-						dispatchActions.setAfterProcessing( response );
+						__internalProcessCheckoutResponse( response );
 					} );
 				} catch {
 					createErrorNotice(
@@ -257,14 +295,18 @@ const CheckoutProcessor = () => {
 							),
 							errorResponse?.message ??
 								__(
-									'Something went wrong.',
+									'Something went wrong. Please contact us for assistance.',
 									'woocommerce'
 								)
 						),
-						{ id: 'checkout', context: 'wc/checkout' }
+						{
+							id: 'checkout',
+							context: 'wc/checkout',
+							__unstableHTML: true,
+						}
 					);
 				}
-				dispatchActions.setHasError( true );
+				__internalSetHasError( true );
 				setIsProcessingOrder( false );
 			} );
 	}, [
@@ -279,12 +321,13 @@ const CheckoutProcessor = () => {
 		shouldCreateAccount,
 		extensionData,
 		cartNeedsShipping,
-		dispatchActions,
 		createErrorNotice,
 		receiveCart,
+		__internalSetHasError,
+		__internalProcessCheckoutResponse,
 	] );
 
-	// process order if conditions are good.
+	// Process order if conditions are good.
 	useEffect( () => {
 		if ( paidAndWithoutErrors && ! isProcessingOrder ) {
 			processOrder();

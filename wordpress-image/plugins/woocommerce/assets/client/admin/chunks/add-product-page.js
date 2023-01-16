@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunk_wcAdmin_webpackJsonp=self.webpackChunk_wcAdmin_webpackJsonp||[]).push([[3118],{28497:function(e,c,n){n.r(c);var a=n(69307),t=n(14599),r=n(39857);c.default=()=>((0,a.useEffect)((()=>{(0,t.recordEvent)("view_new_product_management_experience")}),[]),(0,a.createElement)("div",{className:"woocommerce-add-product"},(0,a.createElement)(r.H,null)))}}]);

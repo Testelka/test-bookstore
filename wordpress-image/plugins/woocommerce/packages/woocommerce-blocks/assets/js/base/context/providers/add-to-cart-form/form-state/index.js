@@ -15,6 +15,8 @@ import {
 	productSupportsAddToCartForm,
 } from '@woocommerce/base-utils';
 import { useDispatch } from '@wordpress/data';
+import { VALIDATION_STORE_KEY } from '@woocommerce/block-data';
+
 /**
  * Internal dependencies
  */
@@ -28,8 +30,7 @@ import {
 	emitEventWithAbort,
 	reducer as emitReducer,
 } from './event-emit';
-import { useValidationContext } from '../../validation';
-import { useEmitResponse } from '../../../hooks/use-emit-response';
+import { isErrorResponse, isFailResponse } from '../../../event-emit';
 import { removeNoticesByStatus } from '../../../../../utils/notices';
 
 /**
@@ -100,26 +101,22 @@ export const AddToCartFormStateContextProvider = ( {
 	const [ observers, observerDispatch ] = useReducer( emitReducer, {} );
 	const currentObservers = useShallowEqual( observers );
 	const { createErrorNotice } = useDispatch( 'core/notices' );
-	const { setValidationErrors } = useValidationContext();
-	const {
-		isSuccessResponse,
-		isErrorResponse,
-		isFailResponse,
-	} = useEmitResponse();
+	const { setValidationErrors } = useDispatch( VALIDATION_STORE_KEY );
 
 	/**
 	 * @type {AddToCartFormEventRegistration}
 	 */
 	const eventRegistration = useMemo(
 		() => ( {
-			onAddToCartAfterProcessingWithSuccess: emitterObservers(
-				observerDispatch
-			).onAddToCartAfterProcessingWithSuccess,
-			onAddToCartAfterProcessingWithError: emitterObservers(
-				observerDispatch
-			).onAddToCartAfterProcessingWithError,
-			onAddToCartBeforeProcessing: emitterObservers( observerDispatch )
-				.onAddToCartBeforeProcessing,
+			onAddToCartAfterProcessingWithSuccess:
+				emitterObservers( observerDispatch )
+					.onAddToCartAfterProcessingWithSuccess,
+			onAddToCartAfterProcessingWithError:
+				emitterObservers( observerDispatch )
+					.onAddToCartAfterProcessingWithError,
+			onAddToCartBeforeProcessing:
+				emitterObservers( observerDispatch )
+					.onAddToCartBeforeProcessing,
 		} ),
 		[ observerDispatch ]
 	);
@@ -247,7 +244,7 @@ export const AddToCartFormStateContextProvider = ( {
 						const message =
 							data.processingResponse?.message ||
 							__(
-								'Something went wrong. Please contact us to get assistance.',
+								'Something went wrong. Please contact us for assistance.',
 								'woocommerce'
 							);
 						createErrorNotice( message, {
@@ -283,9 +280,6 @@ export const AddToCartFormStateContextProvider = ( {
 		addToCartFormState.processingResponse,
 		dispatchActions,
 		createErrorNotice,
-		isErrorResponse,
-		isFailResponse,
-		isSuccessResponse,
 		currentObservers,
 		product?.id,
 	] );

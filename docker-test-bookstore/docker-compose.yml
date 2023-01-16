@@ -4,7 +4,7 @@ services:
   wordpress:
     depends_on:
       - db
-    image: testelkapl/test-bookstore-wordpress:1.0
+    image: testelkapl/test-bookstore-wordpress:2.0
     restart: always
     ports:
       - 8080:80
@@ -21,7 +21,7 @@ services:
       - wpsite
 
   db:
-    image: testelkapl/test-bookstore-mysql:1.0
+    image: testelkapl/test-bookstore-mysql:2.0
     restart: always
     volumes:
       - db_data:/var/lib/mysql

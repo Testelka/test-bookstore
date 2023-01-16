@@ -9,7 +9,6 @@ import { registerBlockType } from '@wordpress/blocks';
  */
 import sharedConfig from '../shared/config';
 import edit from './edit';
-import { Save } from './save';
 import attributes from './attributes';
 import {
 	BLOCK_TITLE as title,
@@ -22,16 +21,21 @@ const blockConfig = {
 	apiVersion: 2,
 	title,
 	description,
+	ancestor: [
+		'woocommerce/all-products',
+		'woocommerce/single-product',
+		'core/post-template',
+	],
+	usesContext: [ 'query', 'queryId', 'postId' ],
 	icon: { src: icon },
 	attributes,
 	edit,
-	save: Save,
 	supports: {
 		...sharedConfig.supports,
 		...( isFeaturePluginBuild() && {
 			color: {
 				text: true,
-				background: false,
+				background: true,
 				link: false,
 				__experimentalSkipSerialization: true,
 			},
