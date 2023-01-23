@@ -4,6 +4,15 @@ This is an app you can use to practice your automation testing skills (for examp
 
 You can deploy it locally using Docker. Just use docker-compose.yml and run docker-compose command to have your test web app set up in seconds.
 
+## How to deploy
+### Install Docker
+More information on how to do it [here](https://www.docker.com/).
+### Copy docker-compose.yml
+Copy docker-compose.yml (from docker-test-bookstore folder) and paste it into newly created folder.
+### Run docker compose
+In the command line go to the folder where you have docker-compose.yml. Then run `docker compose up -d`. Your local application will persist changes you might introduce (for example db changes, like adding new products). If you need a fresh app, just create another folder with docker-compose.yml in it and run docker compose command again.
+
+
 ## Useful info
 ### Admin panel
 If you want to login to Wordpress admin panel (localhost:8080/wp-admin), use admin/admin.
