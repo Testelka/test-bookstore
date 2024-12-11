@@ -22,9 +22,18 @@ To login to phpMyAdmin (localhost:8000), use wordpress/wordpress.
 Payments are in test mode and set up with Stripe. You can use Stripe test cards to perform a payment. You'll find them [here](https://stripe.com/docs/testing#cards).
 ### REST API
 REST API keys for API testing (read/write):
+
 Consumer key: ck_a13ac568ad5104c9c8906e20447f3f0672656d60
+
 Consumer secret: cs_d2e37250406cf283259737c247095bdd867549bc
+
 [REST API documentation for Woocommerce](https://woocommerce.github.io/woocommerce-rest-api-docs/)
+
+Use OAuth 1.0 with HMAC-SHA1 as signature method.
+Example:
+
+<img src ="https://testelka.pl/wp-content/uploads/insomnia-bookstore-example.png"/>
+
 ### Mobile
 If you want to access the app from your mobile device in the same network, you need to change URL settings of the app to the internal IP and port 8080. First, check what is the internal IP of the host. Then go to [http://localhost:8080/wp-admin/options-general.php](http://localhost:8080/wp-admin/options-general.php) (admin/admin) and change WordPress Address (URL) and Site Address (URL) to http://your_internal_ip:80808. 
 
