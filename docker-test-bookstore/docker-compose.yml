@@ -27,6 +27,8 @@ services:
       - db_data:/var/lib/mysql
     cap_add:
       - SYS_NICE  # CAP_SYS_NICE
+    ports:
+      - 3306:3306
     networks:
       - wpsite
       
